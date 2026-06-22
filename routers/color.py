@@ -17,6 +17,7 @@ from utils.models import ColorAnalysisRequest, TrendRequest
 from utils.auth import check_permission, get_current_user
 from utils.audit_logger import AuditAction, log_audit_event
 from utils.rate_limiter import check_user_rate_limit
+from utils.metrics import request_counter, delta_e_duration_seconds
 
 router = APIRouter(prefix="/color", tags=["Color Analysis"])
 logger = logging.getLogger("IRM_Color_Router")
@@ -90,7 +91,8 @@ async def analyze_color(request: ColorAnalysisRequest, req: Request, current_use
     alert_system = req.app.state.alert_system
     log_to_audit_trail = req.app.state.log_to_audit_trail
 
-    de = icap.color_engine.calculate_delta_e(request.lab_sample, request.lab_standard, request.method)
+    with delta_e_duration_seconds.labels("/color/analyze").time():
+        de = icap.color_engine.calculate_delta_e(request.lab_sample, request.lab_standard, request.method)
     status = "Pass" if de <= request.tolerance else "Fail"
 
     if status == "Fail" and de > request.tolerance * 2:
@@ -153,7 +155,7 @@ async def analyze_color(request: ColorAnalysisRequest, req: Request, current_use
         energy_data=iot_energy
     )
 
-    return {
+    response = {
         "delta_e": float(de),
         "status": status,
         "sustainability": sustainability,
@@ -168,6 +170,9 @@ async def analyze_color(request: ColorAnalysisRequest, req: Request, current_use
             "standard": lab_to_mock_spectrum(request.lab_standard)
         }
     }
+
+    request_counter.labels(endpoint="/color/analyze", method="POST", status="success").inc()
+    return response
 
 @router.post("/predict_trend", dependencies=[Depends(check_permission("analyze"))])
 @limiter.limit("50/minute")  # 50 requests per minute per IP
@@ -194,12 +199,14 @@ async def predict_trend(request: TrendRequest, req: Request, current_user: dict 
         ip_address=req.client.host if req.client else None
     )
 
-    return {
+    response = {
         "prediction": trend_result["prediction"],
         "trend": trend_result["trend"],
         "drift_warning": drift,
         "anomalies_indices": anomalies
     }
+    request_counter.labels(endpoint="/color/predict_trend", method="POST", status="success").inc()
+    return response
 
 @router.post("/recipe_formulation", dependencies=[Depends(check_permission("analyze"))])
 @limiter.limit("20/minute")  # 20 requests per minute per IP (computationally intensive)
@@ -231,4 +238,5 @@ async def recipe_formulation(request: ColorAnalysisRequest, req: Request, curren
         ip_address=req.client.host if req.client else None
     )
     
+    request_counter.labels(endpoint="/color/recipe_formulation", method="POST", status="success").inc()
     return result

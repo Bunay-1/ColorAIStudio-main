@@ -1,0 +1,165 @@
+groups:
+  - name: icap_circuit_breaker_alerts
+    interval: 30s
+    rules:
+      # Circuit Breaker OPEN
+      - alert: CircuitBreakerOpen
+        expr: icap_circuit_breaker_state{service=~"ollama|qdrant"} == 2
+        for: 2m
+        labels:
+          severity: critical
+          component: circuit_breaker
+        annotations:
+          summary: "Circuit Breaker OPEN for {{ $labels.service }}"
+          description: "{{ $labels.service }} circuit breaker has been OPEN for 2+ minutes. Service is unavailable."
+          action: "Check {{ $labels.service }} service health and logs"
+
+      # Circuit Breaker High Failure Rate
+      - alert: CircuitBreakerHighFailures
+        expr: rate(icap_circuit_breaker_failures_total[5m]) > 0.5
+        for: 3m
+        labels:
+          severity: warning
+          component: circuit_breaker
+        annotations:
+          summary: "High failure rate for {{ $labels.service }} circuit breaker"
+          description: "{{ $labels.service }} circuit breaker has recorded more than 0.5 failures/sec in the last 5 minutes"
+          action: "Investigate {{ $labels.service }} service stability"
+
+      # Circuit Breaker Repeated Failures
+      - alert: CircuitBreakerRepeatedFailures
+        expr: icap_circuit_breaker_failures_total{service=~"ollama|qdrant"} > 10
+        for: 1m
+        labels:
+          severity: warning
+          component: circuit_breaker
+        annotations:
+          summary: "{{ $labels.service }} circuit breaker has {{ $value }} accumulated failures"
+          description: "{{ $labels.service }} has experienced multiple consecutive failures"
+          action: "Review {{ $labels.service }} service logs and configuration"
+
+  - name: icap_readiness_alerts
+    interval: 30s
+    rules:
+      # Readiness Endpoint Failing
+      - alert: ReadinessEndpointFailing
+        expr: rate(icap_api_requests_total{endpoint="/readyz", status="503"}[5m]) > 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: readiness
+        annotations:
+          summary: "Readiness probe failing - service not ready"
+          description: "More than 10% of readiness checks are returning 503 Service Unavailable"
+          action: "Check external service dependencies (Qdrant, Ollama, Database)"
+
+      # Liveness Endpoint Issues
+      - alert: LivenessEndpointTooSlow
+        expr: histogram_quantile(0.95, rate(icap_api_requests_total{endpoint="/livez"}[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+          component: liveness
+        annotations:
+          summary: "Liveness probe is slow (p95 > 1s)"
+          description: "95th percentile latency for /livez endpoint exceeds 1 second"
+          action: "Check system resources and process performance"
+
+  - name: icap_platform_health
+    interval: 30s
+    rules:
+      # High Error Rate
+      - alert: HighErrorRate
+        expr: rate(icap_api_requests_total{status=~"5.."}[5m]) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+          component: api
+        annotations:
+          summary: "High 5xx error rate detected"
+          description: "Server error rate is above 5% in the last 5 minutes"
+          action: "Check application logs for errors"
+
+      # Qdrant Service Unavailable
+      - alert: QdrantUnavailable
+        expr: |
+          (
+            rate(icap_api_requests_total{endpoint="/health", status="200"}[5m]) == 0
+            or
+            rate(icap_api_requests_total{endpoint="/health", status="200"}[5m]) < 0.1
+          )
+          and on() vector(1) == 1
+        for: 3m
+        labels:
+          severity: critical
+          component: qdrant
+        annotations:
+          summary: "Qdrant vector database appears to be unavailable"
+          description: "Health checks are not reporting Qdrant connectivity"
+          action: "Verify Qdrant service is running and accessible"
+
+      # Ollama Service Unavailable
+      - alert: OllamaUnavailable
+        expr: |
+          (
+            rate(icap_api_requests_total{endpoint="/readyz", status="503"}[5m]) > 0.2
+          )
+        for: 5m
+        labels:
+          severity: critical
+          component: ollama
+        annotations:
+          summary: "Ollama LLM service appears to be unavailable"
+          description: "Readiness checks are failing due to Ollama unavailability"
+          action: "Check Ollama service status and network connectivity"
+
+      # RAG System Issues
+      - alert: RAGSystemDegraded
+        expr: rate(icap_rag_query_duration_seconds_bucket{le="+Inf"}[5m]) > 0 and rate(icap_rag_query_duration_seconds_bucket{le="10"}[5m]) / rate(icap_rag_query_duration_seconds_bucket{le="+Inf"}[5m]) < 0.5
+        for: 3m
+        labels:
+          severity: warning
+          component: rag
+        annotations:
+          summary: "RAG query performance degraded"
+          description: "Less than 50% of RAG queries complete within 10 seconds"
+          action: "Check Qdrant and Ollama performance"
+
+  - name: icap_resource_alerts
+    interval: 30s
+    rules:
+      # High Memory Usage
+      - alert: HighMemoryUsage
+        expr: node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes < 0.15
+        for: 5m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High memory usage detected (less than 15% available)"
+          description: "Memory availability has dropped below 15%"
+          action: "Monitor memory usage and consider scaling"
+
+      # High CPU Usage
+      - alert: HighCPUUsage
+        expr: rate(node_cpu_seconds_total{mode!="idle"}[5m]) > 0.85
+        for: 3m
+        labels:
+          severity: warning
+          component: system
+        annotations:
+          summary: "High CPU usage detected (>85%)"
+          description: "CPU utilization has exceeded 85%"
+          action: "Monitor CPU usage and consider scaling"
+
+      # Disk Space Running Low
+      - alert: LowDiskSpace
+        expr: node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"} < 0.1
+        for: 5m
+        labels:
+          severity: critical
+          component: system
+        annotations:
+          summary: "Disk space running low (less than 10% available)"
+          description: "Root filesystem has less than 10% available space"
+          action: "Clean up disk or add storage urgently"

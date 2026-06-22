@@ -8,6 +8,12 @@ def test_health_check():
         assert response.status_code == 200
         assert response.json()["status"] == "healthy"
 
+def test_liveness_check():
+    with TestClient(app) as client:
+        response = client.get("/livez")
+        assert response.status_code == 200
+        assert response.json()["status"] == "alive"
+
 def test_analyze_color_basic():
     # Тест с базови параметри
     payload = {

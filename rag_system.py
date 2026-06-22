@@ -32,6 +32,7 @@ from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
 from fastembed import SparseTextEmbedding
 import httpx
+from utils.circuit_breaker import qdrant_breaker, CircuitBreakerOpenError
 
 # Конфигуриране на логване
 logging.basicConfig(level=logging.INFO)
@@ -47,7 +48,10 @@ class OllamaEmbeddings:
     async def _ensure_client(self):
         if self.client is None:
             timeout = float(os.environ.get("OLLAMA_TIMEOUT", "180.0"))
-            self.client = httpx.AsyncClient(timeout=timeout)
+            self.client = httpx.AsyncClient(
+                timeout=httpx.Timeout(timeout),
+                limits=httpx.Limits(max_keepalive_connections=20, max_connections=100)
+            )
 
     async def _get_embedding(self, text):
         await self._ensure_client()
@@ -65,10 +69,10 @@ class OllamaEmbeddings:
             results.append(emb)
         return results
 
-    async def embed_query(self, text):
+    async def embed_query(self, text: str):
         return await self._get_embedding(text)
 
-    async def close(self):
+    async def close(self) -> None:
         if self.client:
             await self.client.aclose()
             self.client = None
@@ -330,9 +334,16 @@ class IRM_RAG:
                     ))
 
                 if points:
-                    for i in range(0, len(points), 100):
-                        await self.client.upsert(self.collection_name, points[i:i + 100])
-                    logger.info(f"Successfully upserted {len(points)} points to Qdrant for {source_name}")
+                    async def _upsert_qdrant():
+                        for i in range(0, len(points), 100):
+                            await self.client.upsert(self.collection_name, points[i:i + 100])
+                    
+                    try:
+                        await qdrant_breaker.call_async(_upsert_qdrant)
+                        logger.info(f"Successfully upserted {len(points)} points to Qdrant for {source_name}")
+                    except CircuitBreakerOpenError:
+                        logger.error("Qdrant circuit breaker is OPEN - indexing unavailable")
+                        raise RuntimeError("Qdrant service unavailable - indexing cannot proceed")
         except Exception as e:
             logger.error(f"Error during indexing {source_name}: {e}")
             raise
@@ -475,7 +486,8 @@ class IRM_RAG:
             if self.embed_type == "ollama":
                 dense_vector = await self.hf_embeddings.embed_query(text)
             else:
-                dense_vector = self.hf_embeddings.embed_query(text)
+                loop = asyncio.get_running_loop()
+                dense_vector = await loop.run_in_executor(None, lambda: self.hf_embeddings.embed_query(text))
 
             loop = asyncio.get_running_loop()
             sparse_vector = None
@@ -498,13 +510,20 @@ class IRM_RAG:
                     limit=n_results
                 ))
 
-            query_res = await self.client.query_points(
-                self.collection_name,
-                prefetch=prefetch,
-                query=models.FusionQuery(fusion=models.Fusion.RRF),
-                limit=n_results,
-                with_payload=True
-            )
+            async def _query_qdrant():
+                return await self.client.query_points(
+                    self.collection_name,
+                    prefetch=prefetch,
+                    query=models.FusionQuery(fusion=models.Fusion.RRF),
+                    limit=n_results,
+                    with_payload=True
+                )
+
+            try:
+                query_res = await qdrant_breaker.call_async(_query_qdrant)
+            except CircuitBreakerOpenError:
+                logger.error("Qdrant circuit breaker is OPEN - RAG search unavailable")
+                return "", []
 
             candidates = [res.payload.get("document", "") for res in query_res.points]
             candidate_metas = [res.payload for res in query_res.points]
@@ -553,16 +572,23 @@ class IRM_RAG:
         return embeddings
 
     async def get_stats(self):
-        """Връща бърза статистика за колекцията. Оптимизирано за висока скорост."""
+        """Връща бърза статистика за колекцията. Оптимализирано за висока скорост."""
         if not self.enabled or self.client is None:
             logger.warning("get_stats called but RAG is not enabled or client is None")
             return {"total_size": "0 B", "total_chunks": 0, "total_files": 0}
 
         try:
             # 1. Общ брой точки чрез count() - най-точния метод
-            count_res = await self.client.count(self.collection_name, exact=True)
-            points_count = count_res.count
-            logger.debug(f"RAG Stats: Points count = {points_count}")
+            async def _count_qdrant():
+                return await self.client.count(self.collection_name, exact=True)
+
+            try:
+                count_res = await qdrant_breaker.call_async(_count_qdrant)
+                points_count = count_res.count
+                logger.debug(f"RAG Stats: Points count = {points_count}")
+            except CircuitBreakerOpenError:
+                logger.error("Qdrant circuit breaker is OPEN - cannot retrieve stats")
+                return {"total_size": "0 B", "total_chunks": 0, "total_files": 0, "error": "Qdrant unavailable"}
 
             # 2. Извличане на метаданни за уникални файлове чрез scroll
             # За локален Qdrant това е най-надеждния начин
@@ -571,20 +597,27 @@ class IRM_RAG:
 
             # Обхождаме до 5000 записа за статистиката (Enterprise мащаб)
             for _ in range(25):
-                scroll_res = await self.client.scroll(
-                    self.collection_name,
-                    limit=200,
-                    offset=offset,
-                    with_payload=["source", "size"]
-                )
-                results = scroll_res[0]
-                offset = scroll_res[1]
+                async def _scroll_qdrant():
+                    return await self.client.scroll(
+                        self.collection_name,
+                        limit=200,
+                        offset=offset,
+                        with_payload=["source", "size"]
+                    )
 
-                for res in results:
-                    source = res.payload.get('source')
-                    if source:
-                        unique_files[source] = max(unique_files.get(source, 0), res.payload.get('size', 0))
-                if not offset: break
+                try:
+                    scroll_res = await qdrant_breaker.call_async(_scroll_qdrant)
+                    results = scroll_res[0]
+                    offset = scroll_res[1]
+
+                    for res in results:
+                        source = res.payload.get('source')
+                        if source:
+                            unique_files[source] = max(unique_files.get(source, 0), res.payload.get('size', 0))
+                    if not offset: break
+                except CircuitBreakerOpenError:
+                    logger.warning("Qdrant circuit breaker is OPEN - partial stats only")
+                    break
 
             stats = {
                 "total_size": self.format_size(sum(unique_files.values())),
@@ -596,3 +629,18 @@ class IRM_RAG:
         except Exception as e:
             logger.error(f"Stats Error in RAG System: {e}")
             return {"total_size": "0 B", "total_chunks": 0, "total_files": 0}
+
+    async def close(self) -> None:
+        """Gracefully close RAG resources and clients."""
+        if self.client is not None:
+            try:
+                await self.client.close()
+            except Exception as e:
+                logger.warning(f"Failed to close Qdrant client: {e}")
+            self.client = None
+
+        if hasattr(self.hf_embeddings, "close"):
+            try:
+                await self.hf_embeddings.close()
+            except Exception as e:
+                logger.warning(f"Failed to close embeddings client: {e}")

@@ -6,7 +6,7 @@ ICAP v8.9.5 Enterprise includes comprehensive monitoring and alerting capabiliti
 
 ## System Monitoring
 
-### Health Check Endpoint
+### Health Check Endpoints
 ICAP provides a comprehensive health check endpoint:
 ```bash
 curl http://localhost:8000/health
@@ -33,6 +33,13 @@ Response:
   }
 }
 ```
+
+ICAP also exposes a readiness probe:
+```bash
+curl http://localhost:8000/readyz
+```
+
+The readiness endpoint is optimized for Kubernetes and load balancer probes, and it verifies the database connection plus critical dependency availability.
 
 ### Prometheus Metrics
 ICAP exposes Prometheus metrics at `/metrics`:

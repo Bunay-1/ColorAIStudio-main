@@ -1,0 +1,76 @@
+name: ICAP Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Semantic version for release'
+        required: true
+        default: '8.9.8'
+      added:
+        description: 'Short release note for the added section'
+        required: true
+      changed:
+        description: 'Short release note for the changed section'
+        required: true
+      commit:
+        description: 'Commit release changes'
+        required: false
+        default: 'true'
+      tag:
+        description: 'Create annotated git tag'
+        required: false
+        default: 'true'
+      push:
+        description: 'Push commit and tags to remote'
+        required: false
+        default: 'false'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run release helper
+        run: |
+          python scripts/release.py \
+            --new "${{ github.event.inputs.version }}" \
+            --added "${{ github.event.inputs.added }}" \
+            --changed "${{ github.event.inputs.changed }}" \
+            $([[ "${{ github.event.inputs.commit }}" == "true" ]] && echo --commit) \
+            $([[ "${{ github.event.inputs.tag }}" == "true" ]] && echo --tag) \
+            $([[ "${{ github.event.inputs.push }}" == "true" ]] && echo --push)
+
+      - name: Validate release artifacts
+        run: |
+          python scripts/validate_versioning.py
+
+      - name: Extract release notes from CHANGELOG
+        if: ${{ github.event.inputs.tag == 'true' }}
+        run: |
+          python scripts/changelog_release_notes.py --version "${{ github.event.inputs.version }}" --output release_notes.md
+
+      - name: Publish GitHub Release
+        if: ${{ github.event.inputs.tag == 'true' }}
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: "v${{ github.event.inputs.version }}"
+          name: "v${{ github.event.inputs.version }}"
+          body_path: release_notes.md
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

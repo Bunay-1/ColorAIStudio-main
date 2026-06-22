@@ -1,7 +1,7 @@
 """
 Industrial Color AI Platform (ICAP) — Main API Entry Point
 ==========================================================
-Version: 8.9.5 Enterprise
+Version: 8.9.7 Enterprise
 Automated Quality Control and Colorimetric Analysis Platform
 """
 
@@ -13,8 +13,10 @@ import asyncio
 import threading
 import sqlite3
 import uvicorn
-from typing import List, Dict, Optional
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException, UploadFile, File, BackgroundTasks
+from datetime import datetime
+from typing import Any, List, Dict, Optional
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException, UploadFile, File, BackgroundTasks, status
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -25,6 +27,7 @@ from utils.correlation_id import CorrelationIDMiddleware
 from utils.tracing import setup_tracing, instrument_fastapi
 from utils.multi_tenant import TenantMiddleware
 from utils.api_versioning import version_middleware
+from utils.circuit_breaker import ollama_breaker, qdrant_breaker, CircuitBreakerOpenError
 
 # Shared modules
 import database
@@ -38,6 +41,7 @@ from utils.ws_manager import WebSocketHandler
 from utils.models import ColorAnalysisRequest, TrendRequest, DocumentIndexRequest, TrainRequest, ReasoningRequest
 from utils.config_validator import validate_config, check_service_connectivity
 from utils.logging_config import setup_logging
+from utils.version import ICAP_VERSION, ICAP_VERSION_DISPLAY
 
 # Routers
 try:
@@ -144,7 +148,7 @@ app = FastAPI(
     - Default: 100 requests per minute per IP
     - Configurable via ICAP_RATE_LIMIT environment variable
     """,
-    version="8.9.3",
+    version=ICAP_VERSION,
     docs_url="/docs",
     redoc_url="/redoc",
     openapi_url="/openapi.json",
@@ -192,6 +196,9 @@ app = FastAPI(
         }
     ]
 )
+
+app.state.ready = False
+app.state.startup_complete = False
 
 # Prometheus Metrics
 Instrumentator().instrument(app).expose(app, endpoint="/metrics", include_in_schema=False)
@@ -285,6 +292,9 @@ async def background_indexer():
             if not found_any_new:
                 await manager.broadcast({"type": "rag_update", "stats": stats})
 
+        except asyncio.CancelledError:
+            logger.info("Background indexer task cancelled.")
+            break
         except Exception as e:
             logger.error(f"Indexer error: {e}")
         await asyncio.sleep(60)
@@ -292,20 +302,25 @@ async def background_indexer():
 # --- Lifecycle ---
 @app.on_event("startup")
 async def startup_event():
-    logger.info("🚀 Starting ICAP Engine (v8.9.1)...")
+    app.state.ready = False
+    app.state.startup_complete = False
+    logger.info(f"🚀 Starting ICAP Engine (v{ICAP_VERSION_DISPLAY})...")
     
     # Validate configuration at startup
     logger.info("🔍 Validating configuration...")
     config_results = validate_config()
     if not config_results["valid"]:
         logger.error("❌ Configuration validation failed. Please fix the errors before starting.")
-        # Don't raise exception to allow development mode, but log clearly
         if os.environ.get("ICAP_ENVIRONMENT", "development") == "production":
             raise RuntimeError("Invalid configuration in production mode")
     
     # Check service connectivity
     logger.info("🔍 Checking service connectivity...")
     service_status = check_service_connectivity()
+    app.state.service_status = service_status
+    if os.environ.get("ICAP_ENVIRONMENT", "development") != "development":
+        if not all(service_status.values()):
+            raise RuntimeError("Required external services are not available: " + ", ".join([k for k, v in service_status.items() if not v]))
     
     icap_state.rag = IRM_RAG(lightweight=LIGHTWEIGHT_MODE)
     await icap_state.rag.initialize()
@@ -322,8 +337,28 @@ async def startup_event():
     app.state.EDGE_MODE = EDGE_MODE
     app.state.service_status = service_status
 
-    asyncio.create_task(background_indexer())
-    logger.info("✅ ICAP API is ready.")
+    app.state.background_indexer_task = asyncio.create_task(background_indexer())
+    app.state.ready = True
+    app.state.startup_complete = True
+    logger.info("✅ ICAP API startup complete and ready.")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    logger.info("🛑 Shutting down ICAP API...")
+    app.state.ready = False
+    if hasattr(app.state, "background_indexer_task"):
+        app.state.background_indexer_task.cancel()
+        try:
+            await app.state.background_indexer_task
+            logger.info("✅ Background indexer stopped cleanly.")
+        except asyncio.CancelledError:
+            logger.info("✅ Background indexer task cancelled.")
+    if icap_state.rag is not None:
+        try:
+            await icap_state.rag.close()
+            logger.info("✅ RAG resources closed successfully.")
+        except Exception as e:
+            logger.warning(f"Failed to close RAG resources cleanly: {e}")
 
 # --- Routes ---
 app.include_router(auth.router)
@@ -517,36 +552,65 @@ async def download_report(filename: str):
         return FileResponse(path)
     raise HTTPException(status_code=404, detail="Report not found")
 
+@app.get("/livez", tags=["Health"])
+async def liveness():
+    import psutil
+    from utils.metrics import circuit_breaker_state, circuit_breaker_failures, circuit_breaker_last_failure_time
+    
+    # Update circuit breaker metrics
+    circuit_state_map = {"closed": 0, "half_open": 1, "open": 2}
+    circuit_breaker_state.labels(service="ollama").set(circuit_state_map.get(ollama_breaker.get_state_name(), 0))
+    circuit_breaker_state.labels(service="qdrant").set(circuit_state_map.get(qdrant_breaker.get_state_name(), 0))
+    
+    circuit_breaker_failures.labels(service="ollama").set(ollama_breaker.failures)
+    circuit_breaker_failures.labels(service="qdrant").set(qdrant_breaker.failures)
+    
+    if ollama_breaker.last_failure_time:
+        circuit_breaker_last_failure_time.labels(service="ollama").set(ollama_breaker.last_failure_time)
+    if qdrant_breaker.last_failure_time:
+        circuit_breaker_last_failure_time.labels(service="qdrant").set(qdrant_breaker.last_failure_time)
+    
+    return {
+        "status": "alive",
+        "version": ICAP_VERSION_DISPLAY,
+        "timestamp": datetime.utcnow().isoformat(),
+        "startup_complete": getattr(app.state, "startup_complete", False),
+        "circuit_breakers": {
+            "ollama": ollama_breaker.get_state_name(),
+            "qdrant": qdrant_breaker.get_state_name()
+        }
+    }
+
 @app.get("/health", tags=["Health"])
 async def health():
     """
     Comprehensive health check endpoint.
     Checks status of all services and system resources.
     """
+    import httpx
     import psutil
-    import asyncio
-    from datetime import datetime
-    
+    from utils.retry import retry_async
+
     health_status = {
         "status": "healthy",
-        "version": "8.9.3",
+        "version": ICAP_VERSION_DISPLAY,
         "timestamp": datetime.utcnow().isoformat(),
         "services": {},
         "resources": {}
     }
-    
+
     # System resources
     try:
         health_status["resources"] = {
-            "cpu_percent": psutil.cpu_percent(interval=1),
+            "cpu_percent": psutil.cpu_percent(interval=0.5),
             "memory_percent": psutil.virtual_memory().percent,
             "disk_percent": psutil.disk_usage('/').percent,
-            "memory_available_gb": psutil.virtual_memory().available / (1024**3),
-            "disk_free_gb": psutil.disk_usage('/').free / (1024**3)
+            "memory_available_gb": round(psutil.virtual_memory().available / (1024**3), 2),
+            "disk_free_gb": round(psutil.disk_usage('/').free / (1024**3), 2)
         }
     except Exception as e:
         health_status["resources"] = {"error": str(e)}
-    
+
     # Database health
     try:
         conn = database.get_db_connection()
@@ -557,40 +621,66 @@ async def health():
     except Exception as e:
         health_status["services"]["database"] = f"disconnected: {str(e)}"
         health_status["status"] = "degraded"
-    
+
     # Qdrant health
     try:
-        import httpx
         qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{qdrant_url}/health")
-            if response.status_code == 200:
-                health_status["services"]["qdrant"] = "connected"
-            else:
-                health_status["services"]["qdrant"] = f"error: status {response.status_code}"
-                health_status["status"] = "degraded"
+
+        async def _check_qdrant():
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{qdrant_url.rstrip('/')}/health")
+                response.raise_for_status()
+                return response
+
+        await qdrant_breaker.call_async(
+            lambda: retry_async(
+                _check_qdrant,
+                retries=2,
+                initial_delay=0.5,
+                max_delay=2.0,
+                backoff=2.0,
+                retry_exceptions=(httpx.RequestError, httpx.HTTPStatusError),
+            )
+        )
+        health_status["services"]["qdrant"] = f"connected ({qdrant_breaker.get_state_name()})"
+    except CircuitBreakerOpenError as e:
+        health_status["services"]["qdrant"] = f"open: {str(e)}"
+        health_status["status"] = "degraded"
     except Exception as e:
         health_status["services"]["qdrant"] = f"disconnected: {str(e)}"
         health_status["status"] = "degraded"
-    
+
     # Ollama health
     try:
-        import httpx
         ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
-        async with httpx.AsyncClient(timeout=5.0) as client:
-            response = await client.get(f"{ollama_url}/api/tags")
-            if response.status_code == 200:
-                health_status["services"]["ollama"] = "connected"
-            else:
-                health_status["services"]["ollama"] = f"error: status {response.status_code}"
-                health_status["status"] = "degraded"
+
+        async def _check_ollama():
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{ollama_url.rstrip('/')}/api/tags")
+                response.raise_for_status()
+                return response
+
+        await ollama_breaker.call_async(
+            lambda: retry_async(
+                _check_ollama,
+                retries=2,
+                initial_delay=0.5,
+                max_delay=2.0,
+                backoff=2.0,
+                retry_exceptions=(httpx.RequestError, httpx.HTTPStatusError),
+            )
+        )
+        health_status["services"]["ollama"] = f"connected ({ollama_breaker.get_state_name()})"
+    except CircuitBreakerOpenError as e:
+        health_status["services"]["ollama"] = f"open: {str(e)}"
+        health_status["status"] = "degraded"
     except Exception as e:
         health_status["services"]["ollama"] = f"disconnected: {str(e)}"
         health_status["status"] = "degraded"
-    
+
     # RAG system health
     try:
-        if icap_state.rag and icap_state.rag.enabled:
+        if icap_state.rag and getattr(icap_state.rag, "enabled", True):
             stats = await icap_state.rag.get_stats()
             health_status["services"]["rag"] = {
                 "status": "enabled",
@@ -601,16 +691,18 @@ async def health():
             health_status["services"]["rag"] = "disabled"
     except Exception as e:
         health_status["services"]["rag"] = f"error: {str(e)}"
-    
+        health_status["status"] = "degraded"
+
     # Vision engine health
     try:
-        if icap_state.vision_engine and icap_state.vision_engine.enabled:
+        if icap_state.vision_engine and getattr(icap_state.vision_engine, "enabled", True):
             health_status["services"]["vision_engine"] = "enabled"
         else:
             health_status["services"]["vision_engine"] = "disabled"
     except Exception as e:
         health_status["services"]["vision_engine"] = f"error: {str(e)}"
-    
+        health_status["status"] = "degraded"
+
     # Color engine health
     try:
         if icap_state.color_engine:
@@ -619,8 +711,105 @@ async def health():
             health_status["services"]["color_engine"] = "disabled"
     except Exception as e:
         health_status["services"]["color_engine"] = f"error: {str(e)}"
-    
+        health_status["status"] = "degraded"
+
     return health_status
+
+@app.get("/readyz", tags=["Health"])
+async def readiness():
+    """
+    Readiness probe endpoint.
+    Verifies that required external dependencies are available.
+    """
+    import httpx
+    from utils.retry import retry_async
+
+    readiness_status = {
+        "status": "ready",
+        "version": ICAP_VERSION_DISPLAY,
+        "timestamp": datetime.utcnow().isoformat(),
+        "services": {}
+    }
+
+    if not getattr(app.state, "ready", False):
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={
+                "status": "not ready",
+                "version": ICAP_VERSION_DISPLAY,
+                "timestamp": datetime.utcnow().isoformat(),
+                "services": {"startup": "still in progress"}
+            }
+        )
+
+    try:
+        conn = database.get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        conn.close()
+        readiness_status["services"]["database"] = "connected"
+    except Exception as e:
+        readiness_status["services"]["database"] = f"disconnected: {str(e)}"
+        readiness_status["status"] = "not ready"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=readiness_status)
+
+    qdrant_url = os.environ.get("QDRANT_URL", "http://localhost:6333")
+    try:
+        async def _check_qdrant():
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{qdrant_url.rstrip('/')}/health")
+                response.raise_for_status()
+                return response
+
+        await qdrant_breaker.call_async(
+            lambda: retry_async(
+                _check_qdrant,
+                retries=2,
+                initial_delay=0.5,
+                max_delay=2.0,
+                backoff=2.0,
+                retry_exceptions=(httpx.RequestError, httpx.HTTPStatusError),
+            )
+        )
+        readiness_status["services"]["qdrant"] = f"connected ({qdrant_breaker.get_state_name()})"
+    except CircuitBreakerOpenError as e:
+        readiness_status["services"]["qdrant"] = f"open: {str(e)}"
+        readiness_status["status"] = "not ready"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=readiness_status)
+    except Exception as e:
+        readiness_status["services"]["qdrant"] = f"disconnected: {str(e)}"
+        readiness_status["status"] = "not ready"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=readiness_status)
+
+    ollama_url = os.environ.get("OLLAMA_URL", "http://localhost:11434")
+    try:
+        async def _check_ollama():
+            async with httpx.AsyncClient(timeout=5.0) as client:
+                response = await client.get(f"{ollama_url.rstrip('/')}/api/tags")
+                response.raise_for_status()
+                return response
+
+        await ollama_breaker.call_async(
+            lambda: retry_async(
+                _check_ollama,
+                retries=2,
+                initial_delay=0.5,
+                max_delay=2.0,
+                backoff=2.0,
+                retry_exceptions=(httpx.RequestError, httpx.HTTPStatusError),
+            )
+        )
+        readiness_status["services"]["ollama"] = f"connected ({ollama_breaker.get_state_name()})"
+    except CircuitBreakerOpenError as e:
+        readiness_status["services"]["ollama"] = f"open: {str(e)}"
+        readiness_status["status"] = "not ready"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=readiness_status)
+    except Exception as e:
+        readiness_status["services"]["ollama"] = f"disconnected: {str(e)}"
+        readiness_status["status"] = "not ready"
+        return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=readiness_status)
+
+    return readiness_status
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):

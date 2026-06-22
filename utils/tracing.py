@@ -15,6 +15,8 @@ from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 
+from utils.version import ICAP_VERSION
+
 logger = logging.getLogger("Tracing")
 
 def setup_tracing(service_name: str = "icap-api", jaeger_host: str = "localhost", jaeger_port: int = 6831):
@@ -37,7 +39,7 @@ def setup_tracing(service_name: str = "icap-api", jaeger_host: str = "localhost"
         # Create resource with service information
         resource = Resource.create({
             "service.name": service_name,
-            "service.version": os.environ.get("ICAP_VERSION", "8.9.3"),
+            "service.version": os.environ.get("ICAP_VERSION", ICAP_VERSION),
             "deployment.environment": os.environ.get("ICAP_ENVIRONMENT", "development")
         })
         

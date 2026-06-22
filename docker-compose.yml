@@ -3,13 +3,15 @@ version: '3.8'
 services:
   icap-api:
     build: .
-    image: icap-v8.9.1
+    image: icap-v8.9.7
     container_name: icap-api
     restart: unless-stopped
     ports:
       - "8000:8000"
     env_file:
       - .env
+    environment:
+      - ICAP_VERSION=8.9.7
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -20,11 +22,11 @@ services:
       qdrant:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/livez"]
+      interval: 15s
+      timeout: 5s
       retries: 3
-      start_period: 40s
+      start_period: 30s
     deploy:
       resources:
         limits:

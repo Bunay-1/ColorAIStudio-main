@@ -117,7 +117,7 @@ class IndustrialKG:
                     raise Exception(f"Ollama returned status {response.status_code}")
                 return response.json()
 
-            result = ollama_breaker.call(_call_ollama)
+            result = await ollama_breaker.call_async(_call_ollama)
             
             triplets = json.loads(result.get("response", "[]"))
             for t in triplets:

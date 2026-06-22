@@ -2,6 +2,26 @@
 
 Всички значими промени по проекта се записват в този файл. Форматът е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [8.9.7] — 2026-06-22
+
+### Добавено
+- Added CI-driven version validation and changelog enforcement.
+
+### Променено
+- Added readiness probe and improved release automation support.
+
+## [8.9.6] — 2026-06-22
+
+### Добавено
+- **Observability:** Prometheus metrics instrumentation added for color analysis and RAG endpoints.
+- **DevOps:** Updated Dockerfile label, `docker-compose.yml`, and `docker-compose.prod.yml` for release `8.9.6`.
+- **Versioning:** Added centralized application version module `utils/version.py`.
+- **Deployment:** Updated Kubernetes deployment manifest labels and image tag to `8.9.6`.
+
+### Променено
+- **Versioning:** Platform version updated to `8.9.6 Enterprise` across application metadata and health endpoint.
+- **Documentation:** README, requirements metadata, and Postman collection updated for `8.9.6`.
+
 ## [8.9.5] — 2026-06-20
 ### Добавено
 - **Authentication:** Enhanced JWT authentication system с access/refresh tokens и token blacklist за logout.

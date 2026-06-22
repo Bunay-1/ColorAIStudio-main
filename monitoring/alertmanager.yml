@@ -1,0 +1,166 @@
+global:
+  resolve_timeout: 5m
+  slack_api_url: '${SLACK_WEBHOOK_URL}'
+
+templates:
+  - '/etc/alertmanager/templates/*.tmpl'
+
+route:
+  # Default receiver for all alerts
+  receiver: 'default'
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+    # Circuit Breaker Critical Alerts
+    - match:
+        severity: critical
+        component: circuit_breaker
+      receiver: 'critical-cb'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # Readiness Critical Alerts
+    - match:
+        severity: critical
+        component: readiness
+      receiver: 'critical-readiness'
+      group_wait: 10s
+      repeat_interval: 15m
+
+    # Qdrant/Ollama Critical
+    - match:
+        severity: critical
+        component: qdrant
+      receiver: 'critical-qdrant'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    - match:
+        severity: critical
+        component: ollama
+      receiver: 'critical-ollama'
+      group_wait: 10s
+      repeat_interval: 30m
+
+    # System Critical
+    - match:
+        severity: critical
+        component: system
+      receiver: 'critical-system'
+      group_wait: 10s
+      repeat_interval: 1h
+
+    # Warning Level Alerts
+    - match:
+        severity: warning
+      receiver: 'warning'
+      group_wait: 2m
+      repeat_interval: 8h
+
+    # Info Level Alerts
+    - match:
+        severity: info
+      receiver: 'info'
+      group_wait: 5m
+      repeat_interval: 12h
+
+receivers:
+  # Default receiver
+  - name: 'default'
+    slack_configs:
+      - channel: '#icap-alerts'
+        title: 'ICAP Alert: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ .Annotations.description }}\n{{ end }}'
+        send_resolved: true
+
+  # Circuit Breaker Critical
+  - name: 'critical-cb'
+    slack_configs:
+      - channel: '#icap-critical'
+        title: '🚨 CRITICAL: Circuit Breaker - {{ .GroupLabels.service }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\nAction: {{ .Annotations.action }}\n{{ end }}'
+        send_resolved: true
+        actions:
+          - type: button
+            text: 'View Dashboard'
+            url: 'http://grafana:3000/d/icap-cb'
+
+  # Readiness Critical
+  - name: 'critical-readiness'
+    slack_configs:
+      - channel: '#icap-critical'
+        title: '🚨 CRITICAL: Readiness Check Failing'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\nAction: {{ .Annotations.action }}\n{{ end }}'
+        send_resolved: true
+    email_configs:
+      - to: '${RECIPIENT_EMAIL}'
+        from: '${SENDER_EMAIL}'
+        smarthost: '${SMTP_SERVER}:${SMTP_PORT}'
+        auth_username: '${SENDER_EMAIL}'
+        auth_password: '${SENDER_PASSWORD}'
+        headers:
+          Subject: '🚨 ICAP Critical Alert: Readiness Probe Failing'
+
+  # Qdrant Critical
+  - name: 'critical-qdrant'
+    slack_configs:
+      - channel: '#icap-critical'
+        title: '🚨 CRITICAL: Qdrant Service Down'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\nAction: {{ .Annotations.action }}\n{{ end }}'
+        send_resolved: true
+
+  # Ollama Critical
+  - name: 'critical-ollama'
+    slack_configs:
+      - channel: '#icap-critical'
+        title: '🚨 CRITICAL: Ollama LLM Service Down'
+        text: '{{ range .Alerts }}{{ .Annotations.description }}\nAction: {{ .Annotations.action }}\n{{ end }}'
+        send_resolved: true
+
+  # System Critical
+  - name: 'critical-system'
+    slack_configs:
+      - channel: '#icap-critical'
+        title: '🚨 CRITICAL: System Resource Alert'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\nAction: {{ .Annotations.action }}\n{{ end }}'
+        send_resolved: true
+    email_configs:
+      - to: '${RECIPIENT_EMAIL}'
+        from: '${SENDER_EMAIL}'
+        smarthost: '${SMTP_SERVER}:${SMTP_PORT}'
+        auth_username: '${SENDER_EMAIL}'
+        auth_password: '${SENDER_PASSWORD}'
+
+  # Warning Level
+  - name: 'warning'
+    slack_configs:
+      - channel: '#icap-alerts'
+        title: '⚠️  WARNING: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        send_resolved: true
+
+  # Info Level
+  - name: 'info'
+    slack_configs:
+      - channel: '#icap-info'
+        title: 'ℹ️  INFO: {{ .GroupLabels.alertname }}'
+        text: '{{ range .Alerts }}{{ .Annotations.summary }}\n{{ end }}'
+        send_resolved: true
+
+inhibit_rules:
+  # Suppress warning alerts if critical alert exists
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'dev', 'instance']
+
+  # Suppress info alerts if warning or critical exists
+  - source_match:
+      severity: 'warning'
+    target_match:
+      severity: 'info'
+    equal: ['alertname', 'instance']

@@ -1,13 +1,13 @@
-# Industrial Color AI Platform (ICAP) v8.9.5 Enterprise
+# Industrial Color AI Platform (ICAP) v8.9.7 Enterprise
 
-![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v8.9.5-blue?style=for-the-badge&logo=ai)
+![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v8.9.7-blue?style=for-the-badge&logo=ai)
 ![ISO 9001 Compliance Support](https://img.shields.io/badge/ISO_9001-Compliance_Support-green?style=for-the-badge)
 ![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 
 ## 🚀 Общ Преглед
 **Industrial Color AI Platform (ICAP)** е надеждно софтуерно решение за автоматизиран качествен контрол и колориметричен анализ. Проектирана за индустриална експлоатация, платформата осигурява прецизни измервания и проследимост на данните чрез интеграция на компютърно зрение и семантично търсене.
 
-### 🌟 Ключови подобрения в v8.9.5 Enterprise [Stable]:
+### 🌟 Ключови подобрения в v8.9.7 Enterprise [Stable]:
 - **SQL Audit Core**: Миграция на Audit Trail към SQLite за Edge мащабируемост. Поддържа PostgreSQL за Cloud инсталации.
 - **Persistent Indexing State**: Пълна устойчивост на фоновия индексер при рестарт.
 - **Lifespan State Management**: Dependency Injection архитектура за по-добра стабилност при натоварване.
@@ -120,8 +120,8 @@ docker-compose up -d
 
 Алтернативно, за самостоятелен контейнер:
 ```bash
-docker build -t icap-v8.9.5 .
-docker run -p 8000:8000 --env-file .env icap-v8.9.5
+docker build -t icap-v8.9.7 .
+docker run -p 8000:8000 --env-file .env icap-v8.9.7
 ```
 
 ### 3. Ръчна инсталация
@@ -150,4 +150,4 @@ ICAP включва вградена система за **Audit Trail**, коя
 **Забележка относно AI терминологията:** Платформата използва "AI" като общ термин за интелигентни функции. Функциите за диагностика (RCA) в момента се базират на усъвършенствани евристични алгоритми и експертни системи за подпомагане на вземането на решения (DSS), докато Vision Engine (YOLO/ViT) използва дълбоко машинно обучение с валидирани метрики.
 
 ---
-*Изготвено от: ICAP Engineering Team | v8.9.5 | 2026*
+*Изготвено от: ICAP Engineering Team | v8.9.7 | 2026*

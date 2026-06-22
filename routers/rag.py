@@ -8,10 +8,12 @@ from glob import glob
 import httpx
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-from utils.models import ReasoningRequest, DocumentIndexRequest
+from utils.circuit_breaker import ollama_breaker
+from utils.metrics import request_counter, rag_query_duration_seconds, rag_documents_indexed_total
 from utils.auth import check_permission, get_current_user
 from utils.audit_logger import AuditAction, log_audit_event
 from utils.rate_limiter import check_user_rate_limit
+from utils.models import ReasoningRequest, DocumentIndexRequest
 
 router = APIRouter(prefix="/rag", tags=["RAG & Knowledge"])
 logger = logging.getLogger("IRM_RAG_Router")
@@ -58,7 +60,8 @@ async def diagnose(request: ReasoningRequest, req: Request, current_user: dict =
                 os.remove(temp_img)
 
     if request.use_rag:
-        retrieved_context, sources = await icap.rag.query(request.prompt, filters=request.filters)
+        with rag_query_duration_seconds.labels("diagnose_rag_lookup").time():
+            retrieved_context, sources = await icap.rag.query(request.prompt, filters=request.filters)
 
     full_context = f"{vision_context}\n{retrieved_context}\n{request.context}".strip()
     if len(full_context) > 4000:
@@ -78,23 +81,24 @@ async def diagnose(request: ReasoningRequest, req: Request, current_user: dict =
 
     start_time = time.time()
     try:
-        async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
-            # Проверка на сървъра
-            try:
+        async def _call_ollama():
+            async with httpx.AsyncClient(timeout=OLLAMA_TIMEOUT) as client:
                 base_url = OLLAMA_URL.replace("/api/generate", "")
-                await client.get(base_url, timeout=2.0)
-            except:
-                raise Exception("Ollama сървърът не отговаря.")
+                response = await client.get(base_url, timeout=2.0)
+                response.raise_for_status()
 
-            ollama_payload = {
-                "model": MODEL_NAME,
-                "prompt": full_prompt,
-                "stream": False,
-                "options": {"temperature": request.temperature}
-            }
-            response = await client.post(OLLAMA_URL, json=ollama_payload)
-            data = response.json()
-            analysis_text = data.get("response", "").strip()
+                ollama_payload = {
+                    "model": MODEL_NAME,
+                    "prompt": full_prompt,
+                    "stream": False,
+                    "options": {"temperature": request.temperature}
+                }
+                response = await client.post(OLLAMA_URL, json=ollama_payload)
+                response.raise_for_status()
+                return response.json()
+
+        data = await ollama_breaker.call_async(_call_ollama)
+        analysis_text = data.get("response", "").strip()
     except Exception as e:
         logger.error(f"Ollama error: {e}")
         analysis_text = f"[ГРЕШКА] Ollama не е достъпна: {str(e)}"
@@ -114,6 +118,7 @@ async def diagnose(request: ReasoningRequest, req: Request, current_user: dict =
         ip_address=req.client.host if req.client else None
     )
 
+    request_counter.labels(endpoint="/rag/diagnose", method="POST", status="success").inc()
     return {
         "analysis": analysis_text,
         "sources": sources,
@@ -146,6 +151,8 @@ async def index_document(request: DocumentIndexRequest, background_tasks: Backgr
         files_to_index = list(set(files_to_index))
         for file in files_to_index:
             background_tasks.add_task(icap.rag.index_any, file, progress_cb)
+        rag_documents_indexed_total.inc(len(files_to_index))
+        request_counter.labels(endpoint="/rag/index_document", method="POST", status="success").inc()
         
         # Log audit event
         log_audit_event(
@@ -164,6 +171,7 @@ async def index_document(request: DocumentIndexRequest, background_tasks: Backgr
         return {"message": f"Започна индексиране на {len(files_to_index)} файла"}
     else:
         background_tasks.add_task(icap.rag.index_any, file_path, progress_cb)
+        rag_documents_indexed_total.inc()
         
         # Log audit event
         log_audit_event(
@@ -178,6 +186,7 @@ async def index_document(request: DocumentIndexRequest, background_tasks: Backgr
             ip_address=req.client.host if req.client else None
         )
         
+        request_counter.labels(endpoint="/rag/index_document", method="POST", status="success").inc()
         return {"message": f"Започна индексиране на {file_path}"}
 
 @router.get("/stats", dependencies=[Depends(check_permission("view"))])
@@ -187,4 +196,5 @@ async def get_rag_stats(req: Request, current_user: dict = Depends(get_current_u
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "light")
     
     icap = req.app.state.icap
+    request_counter.labels(endpoint="/rag/stats", method="GET", status="success").inc()
     return await icap.rag.get_stats()
