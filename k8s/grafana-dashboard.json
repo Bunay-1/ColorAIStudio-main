@@ -1,0 +1,339 @@
+{
+  "dashboard": {
+    "title": "ICAP Enterprise Monitoring",
+    "uid": "icap-enterprise-monitoring",
+    "tags": ["icap", "enterprise", "monitoring"],
+    "timezone": "browser",
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Requests per Second",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total[1m])",
+            "legendFormat": "{{method}} {{endpoint}}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 2,
+        "title": "Response Time (P95)",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95 Response Time"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 3,
+        "title": "Error Rate",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(http_requests_total{status=~\"5..\"}[5m]) / rate(http_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Error Rate %",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 4,
+        "title": "Active Connections",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "http_active_connections",
+            "legendFormat": "Active Connections"
+          }
+        ]
+      },
+      {
+        "id": 5,
+        "title": "Memory Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "process_resident_memory_bytes / 1024 / 1024",
+            "legendFormat": "Memory MB"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Memory (MB)",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 6,
+        "title": "CPU Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(process_cpu_seconds_total[1m]) * 100",
+            "legendFormat": "CPU %"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "CPU %",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      },
+      {
+        "id": 7,
+        "title": "Rate Limit Violations",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(rate_limit_violations_total[5m])",
+            "legendFormat": "Rate Limit Violations/min"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Violations/min",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 8,
+        "title": "Authentication Failures",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(auth_failures_total[5m])",
+            "legendFormat": "Auth Failures/min"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Failures/min",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 9,
+        "title": "Active Users",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_users",
+            "legendFormat": "Active Users"
+          }
+        ]
+      },
+      {
+        "id": 10,
+        "title": "Active Tenants",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "active_tenants",
+            "legendFormat": "Active Tenants"
+          }
+        ]
+      },
+      {
+        "id": 11,
+        "title": "Database Connections",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "db_connections_active",
+            "legendFormat": "Active Connections"
+          },
+          {
+            "expr": "db_connections_idle",
+            "legendFormat": "Idle Connections"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Connections",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 12,
+        "title": "Database Query Duration",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95 Query Duration"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Seconds",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 13,
+        "title": "Color Analysis Requests",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(color_analysis_requests_total[5m])",
+            "legendFormat": "Color Analysis Rate"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/min",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 14,
+        "title": "Vision Analysis Requests",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(vision_analysis_requests_total[5m])",
+            "legendFormat": "Vision Analysis Rate"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/min",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 15,
+        "title": "RAG Query Requests",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(rag_query_requests_total[5m])",
+            "legendFormat": "RAG Query Rate"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/min",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 16,
+        "title": "Audit Log Events",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(audit_log_events_total[5m])",
+            "legendFormat": "Audit Events Rate"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/min",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 17,
+        "title": "Tenant Resource Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "tenant_api_calls_total",
+            "legendFormat": "{{tenant_id}} API Calls"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "API Calls",
+            "min": 0
+          }
+        ]
+      },
+      {
+        "id": 18,
+        "title": "System Health",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "system_health_score",
+            "legendFormat": "Health Score"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "thresholds": {
+              "steps": [
+                {"color": "red", "value": 0},
+                {"color": "yellow", "value": 50},
+                {"color": "green", "value": 80}
+              ]
+            }
+          }
+        }
+      },
+      {
+        "id": 19,
+        "title": "Pod Status",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "kube_pod_status_phase{namespace=\"icap\"}",
+            "legendFormat": "{{phase}}"
+          }
+        ]
+      },
+      {
+        "id": 20,
+        "title": "Disk Usage",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "node_filesystem_avail_bytes / node_filesystem_size_bytes * 100",
+            "legendFormat": "Disk Available %"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Available %",
+            "min": 0,
+            "max": 100
+          }
+        ]
+      }
+    ]
+  }
+}

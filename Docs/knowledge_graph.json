@@ -1,0 +1,46 @@
+{
+    "directed": true,
+    "multigraph": false,
+    "graph": {},
+    "nodes": [
+        {
+            "type": "Machine",
+            "label": "Машина №3",
+            "usage_hours": 520,
+            "id": "Machine_P3"
+        },
+        {
+            "type": "Machine",
+            "label": "Миксер Основен",
+            "id": "Mixer_01"
+        },
+        {
+            "type": "Issue",
+            "label": "Отклонение в жълтия спектър",
+            "id": "Yellow_Drift"
+        },
+        {
+            "type": "Rule",
+            "label": "Лимит 500 часа",
+            "id": "Maintenance_Interval"
+        }
+    ],
+    "links": [
+        {
+            "relation": "FEEDS",
+            "source": "Machine_P3",
+            "target": "Mixer_01"
+        },
+        {
+            "relation": "CAUSES",
+            "condition": "usage > 500h",
+            "source": "Machine_P3",
+            "target": "Yellow_Drift"
+        },
+        {
+            "relation": "TRIGGERED_BY",
+            "source": "Yellow_Drift",
+            "target": "Maintenance_Interval"
+        }
+    ]
+}

@@ -1,0 +1,76 @@
+# --- ICAP PRODUCTION REQUIREMENTS (v8.9.5 Enterprise) ---
+
+# Backend & API
+fastapi
+uvicorn[standard]
+python-multipart
+python-jose[cryptography]
+passlib[bcrypt]
+requests
+pydantic
+pydantic-settings
+python-dotenv
+httpx
+psutil
+slowapi
+
+# Data Analysis & Math
+numpy<2.0.0
+pandas
+scipy
+scikit-learn
+tqdm
+
+# Color Science
+# colour-science<0.4.0  # Temporarily disabled due to numpy version conflict
+matplotlib
+
+# Document Processing & RAG
+lxml
+python-docx
+openpyxl
+pypdf
+qdrant-client
+sentence-transformers
+fastembed
+langchain-text-splitters
+langchain-experimental
+langchain-community
+langchain-huggingface
+
+# Alerting
+twilio
+
+# AI & Machine Learning (Transformers/Vision)
+ultralytics
+opencv-python-headless
+openai-whisper
+gTTS
+torch
+torchvision
+transformers
+trl
+peft
+accelerate
+bitsandbytes
+
+# Industrial Connectivity
+paho-mqtt
+asyncua
+
+# Graphics & Visualization
+networkx
+Pillow
+fpdf2
+
+# Logging
+python-json-logger
+
+# Monitoring
+prometheus-fastapi-instrumentator
+
+# Enterprise Features
+pyotp
+qrcode
+websockets
+email-validator

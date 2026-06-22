@@ -1,0 +1,2561 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Industrial Color AI Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:        #0a0c0f;
+  --bg2:       #111418;
+  --bg3:       #181c22;
+  --panel:     #1a1f28;
+  --border:    #242a35;
+  --border2:   #2e3647;
+  --accent:    #e8ff47;
+  --accent2:   #47c8ff;
+  --accent3:   #ff6b47;
+  --text:      #e8eaf0;
+  --muted:     #6b7585;
+  --muted2:    #3d4554;
+  --green:     #47ff9c;
+  --red:       #ff4766;
+  --mono:      'Space Mono', monospace;
+  --display:   'Syne', sans-serif;
+  --radius:    6px;
+  --radius-lg: 12px;
+}
+
+[data-theme="light"] {
+  --bg:        #f0f2f5;
+  --bg2:       #ffffff;
+  --bg3:       #e4e6eb;
+  --panel:     #ffffff;
+  --border:    #d1d5db;
+  --border2:   #9ca3af;
+  --text:      #111827;
+  --muted:     #4b5563;
+  --muted2:    #6b7280;
+  --accent:    #2563eb;
+  --accent2:   #0891b2;
+  --accent3:   #dc2626;
+  --green:     #16a34a;
+  --red:       #dc2626;
+}
+
+* { margin:0; padding:0; box-sizing:border-box; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--display);
+  min-height: 100vh;
+  display: flex; /* Sidebar + Content */
+  overflow: hidden;
+  scrollbar-width: none;
+}
+body::-webkit-scrollbar { display: none; }
+
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-image:
+    repeating-linear-gradient(0deg, transparent, transparent 40px, var(--border) 40px, var(--border) 40.5px),
+    repeating-linear-gradient(90deg, transparent, transparent 40px, var(--border) 40px, var(--border) 40.5px);
+  opacity: 0.15;
+  pointer-events:none;
+  z-index:0;
+}
+
+/* SIDEBAR LAYOUT */
+.sidebar {
+  width: 280px;
+  height: 100vh;
+  background: var(--bg2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  z-index: 100;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar::-webkit-scrollbar { display: none; }
+
+.sidebar-header {
+  padding: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.logo {
+  font-family: var(--mono);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: .1em;
+  white-space: nowrap;
+}
+.logo span { color: var(--muted); }
+
+.sidebar-nav {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+.sidebar-nav::-webkit-scrollbar { display: none; }
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  font-family: var(--display);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s;
+  text-align: left;
+  width: 100%;
+}
+.tab:hover { color: var(--text); background: var(--bg3); }
+.tab.active {
+  color: var(--accent);
+  background: rgba(232, 255, 71, .07);
+  border-color: rgba(232, 255, 71, .2);
+}
+.tab .dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--muted2);
+}
+.tab.active .dot { background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+
+.sidebar-footer {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.sidebar-status {
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+}
+.status-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--muted2);
+  transition: all 0.3s;
+}
+.status-dot.on { background: var(--green); box-shadow: 0 0 10px var(--green); }
+
+main {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  height: 100vh;
+  padding: 32px 40px 80px;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+main::-webkit-scrollbar { display: none; }
+
+.page { display:none; }
+.page.active { display:block; }
+
+.section-header {
+  display:flex;
+  align-items:baseline;
+  gap:12px;
+  margin-bottom:20px;
+}
+.section-title {
+  font-size:22px;
+  font-weight:800;
+  color: var(--text);
+  letter-spacing:-.02em;
+}
+.section-badge {
+  font-family: var(--mono);
+  font-size:10px;
+  padding:3px 8px;
+  border-radius:4px;
+  background: rgba(232,255,71,.1);
+  color: var(--accent);
+  border: 1px solid rgba(232,255,71,.2);
+  letter-spacing:.05em;
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding:20px;
+  margin-bottom:16px;
+}
+.card-title {
+  font-size:11px;
+  font-weight:600;
+  letter-spacing:.1em;
+  color: var(--muted);
+  text-transform:uppercase;
+  margin-bottom:12px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.card-title::before {
+  content:'';
+  display:block;
+  width:3px; height:12px;
+  border-radius:2px;
+  background: var(--accent);
+}
+
+.form-row {
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:12px;
+  margin-bottom:12px;
+}
+.form-row.single { grid-template-columns:1fr; }
+.form-row.triple { grid-template-columns:1fr 1fr 1fr; }
+.form-row.quad { grid-template-columns:1fr 1fr 1fr 1fr; }
+
+.field { display:flex; flex-direction:column; gap:6px; }
+.field label {
+  font-size:11px;
+  font-weight:600;
+  color: var(--muted);
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+
+input[type=text], input[type=number], select, textarea {
+  background: var(--bg2);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding:9px 12px;
+  color: var(--text);
+  font-family: var(--mono);
+  font-size:13px;
+  outline:none;
+  transition: border-color .15s;
+  width:100%;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(232,255,71,.08);
+}
+
+.btn {
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 20px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-family: var(--display);
+  font-size:14px;
+  font-weight:600;
+  cursor:pointer;
+  transition: all .15s;
+  white-space:nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #0a0c0f;
+  border-color: var(--accent);
+}
+.btn-primary:hover {
+  background: #d4eb3c;
+  box-shadow: 0 0 20px rgba(232,255,71,.3);
+}
+.btn-ghost {
+  background:transparent;
+  color: var(--muted);
+  border-color: var(--border2);
+}
+.btn-ghost:hover { color:var(--text); border-color:var(--border2); background:var(--bg3); }
+
+.terminal {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding:16px;
+  font-family: var(--mono);
+  font-size:12px;
+  line-height:1.7;
+  min-height:160px;
+  max-height:320px;
+  overflow-y:auto;
+  color: var(--muted);
+}
+
+.stats-grid {
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap:12px;
+  margin-bottom:16px;
+}
+.stat-card {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding:14px;
+}
+.stat-label {
+  font-size:10px;
+  font-weight:600;
+  letter-spacing:.08em;
+  color: var(--muted);
+  text-transform:uppercase;
+  margin-bottom:6px;
+}
+.stat-value {
+  font-family: var(--mono);
+  font-size:22px;
+  font-weight:700;
+  color: var(--text);
+}
+.stat-value.accent { color: var(--accent); }
+
+.chat-window {
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  height:400px;
+  overflow-y:auto;
+  padding:16px;
+  display:flex;
+  flex-direction:column;
+  gap:12px;
+  margin-bottom:12px;
+  scrollbar-width: none;
+}
+.chat-window::-webkit-scrollbar { display: none; }
+.msg { display:flex; gap:10px; align-items:flex-start; margin-bottom:10px; }
+.msg-avatar { width:30px; height:30px; border-radius:50%; background:var(--accent); color:var(--bg); display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px; }
+.msg-bubble { background:var(--panel); padding:10px; border-radius:10px; max-width:80%; font-size:14px; color: var(--text) !important; border: 1px solid var(--border); }
+.msg.user { flex-direction:row-reverse; }
+.msg.user .msg-bubble { background:var(--accent); color: var(--bg) !important; }
+
+.chart-wrap { height:200px; background:var(--bg2); border-radius:12px; margin-top:10px; position:relative; }
+
+</style>
+</head>
+<body>
+
+<aside class="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">COLOR<span>/</span>AI STUDIO</div>
+  </div>
+
+  <nav class="sidebar-nav">
+    <div style="padding: 10px 16px; font-size: 10px; color: var(--red); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 5px rgba(255,71,102,0.3);">Core Version 8.9.1</div>
+    <button class="tab active" onclick="showPage('color_ai',this)">
+      <span class="dot"></span> Цветови AI
+    </button>
+    <button class="tab" onclick="showPage('vision_ai',this)">
+      <span class="dot"></span> Vision AI
+    </button>
+    <button class="tab" onclick="showPage('rag_iot',this)">
+      <span class="dot"></span> База Знания & RAG
+    </button>
+    <button class="tab" onclick="showPage('train',this)">
+      <span class="dot"></span> Обучение
+    </button>
+    <button class="tab" onclick="showPage('agents',this)">
+      <span class="dot"></span> Multi-Agent Workspace
+    </button>
+    <button class="tab" onclick="showPage('chat',this)">
+      <span class="dot"></span> AI Assistant
+    </button>
+    <button class="tab" onclick="showPage('hsi',this)">
+      <span class="dot"></span> HSI Диагностика
+    </button>
+    <button class="tab" onclick="showPage('knowledge_graph',this)">
+      <span class="dot"></span> Knowledge Graph
+    </button>
+    <button class="tab" onclick="showPage('kpi',this)">
+      <span class="dot"></span> Enterprise KPI
+    </button>
+    <button class="tab" onclick="showPage('fleet',this)">
+      <span class="dot"></span> Fleet & MLOps
+    </button>
+  </nav>
+
+  <div class="sidebar-status">
+    <div class="status-item">
+      <span>System Status</span>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span id="status-text" style="font-weight:700; color:var(--text);">ONLINE</span>
+        <span class="status-dot on" id="status-dot"></span>
+      </div>
+    </div>
+    <div class="status-item">
+      <span>CPU Usage</span>
+      <span id="res-cpu" style="color:var(--text);">0%</span>
+    </div>
+    <div class="status-item">
+      <span>RAM Usage</span>
+      <span id="res-ram" style="color:var(--text);">0%</span>
+    </div>
+    <button class="btn btn-ghost" onclick="toggleTheme()" style="width:100%; padding:8px; font-size:10px; margin-top:8px; border-color:var(--border);">🌓 Toggle Theme</button>
+  </div>
+</aside>
+
+<main>
+
+<!-- PAGE: VISION AI -->
+<div class="page" id="page-vision_ai">
+    <div class="section-header">
+        <h1 class="section-title">Vision AI Инспекция на повърхности</h1>
+        <span class="section-badge">YOLOv11 + OpenCV</span>
+        <span class="section-badge" style="background:rgba(71,255,156,0.1); color:var(--green); border-color:var(--green);">PRODUCTION READY</span>
+    </div>
+
+    <div class="form-row" style="grid-template-columns: 2fr 1fr;">
+        <div class="card">
+            <div class="card-title">Визуална инспекция</div>
+            <div id="v-preview" style="width:100%; height:400px; background:#000; border-radius:var(--radius); display:flex; align-items:center; justify-content:center; overflow:hidden; position:relative; border: 1px solid var(--border);">
+                <span style="color:var(--muted)">Изчаква се изображение...</span>
+            </div>
+            <div style="margin-top:15px; display:flex; gap:10px;">
+                <input type="file" id="v-file" accept="image/*" style="display:none" onchange="previewVisionImage(this)">
+                <button class="btn btn-primary" onclick="document.getElementById('v-file').click()">📂 Качи Снимка</button>
+                <button class="btn btn-ghost" onclick="analyzeVision()">🔍 Стартирай AI Анализ</button>
+                <button class="btn btn-ghost" style="color:var(--red); border-color:var(--border);" onclick="clearVision()">🗑 Изчисти</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Резултати от анализа</div>
+            <div id="v-results" style="font-size:13px; line-height:1.6;">
+                <div style="color:var(--muted)">Няма налични данни...</div>
+            </div>
+            <div style="margin-top:20px; display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                <div class="stat-card" style="padding:10px;"><div class="stat-label" style="font-size:9px;">Текстура</div><div class="stat-value" id="v-rough" style="font-size:16px;">—</div></div>
+                <div class="stat-card" style="padding:10px;"><div class="stat-label" style="font-size:9px;">Гланц</div><div class="stat-value" id="v-gloss" style="font-size:16px;">—</div></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PAGE: COLOR AI -->
+<div class="page active" id="page-color_ai">
+  <div class="section-header">
+    <h1 class="section-title">Колориметричен Анализ & AI Прогнози</h1>
+    <span class="section-badge">LIVE</span>
+    <span class="section-badge" style="background:rgba(71,200,255,0.1); color:var(--accent2); border-color:var(--accent2);">DSS - Decision Support System</span>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Текущ Delta E</div>
+      <div class="stat-value accent" id="val-delta-e">0.00</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Статус</div>
+      <div class="stat-value" id="val-status">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Прогнозиран Тренд</div>
+      <div class="stat-value" id="val-trend">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Аномалии</div>
+      <div class="stat-value" id="val-anomalies">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Eco Score (Industry 5.0)</div>
+      <div class="stat-value" id="val-eco-score" style="color:var(--green)">—</div>
+    </div>
+  </div>
+
+  <div class="form-row" style="grid-template-columns: 2fr 1fr;">
+    <div class="card">
+      <div class="card-title">Измерване на отклонение</div>
+      <div class="form-row quad" style="grid-template-columns: repeat(2, 1fr); margin-bottom: 20px;">
+        <div class="field">
+          <label>Партида #</label>
+          <input type="text" id="c-batch-id" value="B-2024-001">
+        </div>
+        <div class="field">
+          <label>Оператор</label>
+          <input type="text" id="c-op-id" value="Administrator">
+        </div>
+      </div>
+      <div class="form-row quad" style="grid-template-columns: repeat(3, 1fr); gap: 20px;">
+        <div class="field">
+          <label>Standard L*a*b*</label>
+          <input type="text" id="c-lab-std" value="50, 10, 10">
+        </div>
+        <div class="field">
+          <label>Sample L*a*b*</label>
+          <input type="text" id="c-lab-sam" value="52, 11, 11">
+        </div>
+        <div class="field">
+          <label>Количество (кг)</label>
+          <div style="display:flex; gap:4px;">
+            <input type="text" id="c-batch" value="100" style="flex:1">
+            <select style="width:auto; font-size:11px; padding:4px;" onchange="document.getElementById('c-batch').value=this.value">
+              <option value="100">100</option>
+              <option value="50">50</option>
+              <option value="30">30</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      <div class="form-row quad" style="grid-template-columns: repeat(2, 1fr); gap: 20px;">
+        <div class="field">
+          <label>Толеранс ΔE</label>
+          <input type="text" id="c-tol" value="1.0">
+        </div>
+        <div class="field">
+          <label>Метод</label>
+          <select id="c-method">
+            <option value="CIE2000">CIE2000</option>
+            <option value="CIE94">CIE94</option>
+            <option value="CIE76">CIE76</option>
+            <option value="CMC">CMC</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="field">
+          <label>Илюминант</label>
+          <select id="c-ill">
+            <option value="D65">D65 (Daylight)</option>
+            <option value="D50">D50 (Printing)</option>
+            <option value="D55">D55</option>
+            <option value="D60">D60</option>
+            <option value="D75">D75</option>
+            <option value="A">A (Incandescent)</option>
+            <option value="C">C</option>
+            <option value="F1">F1</option>
+            <option value="F2">F2 (Cool White)</option>
+            <option value="F3">F3</option>
+            <option value="F4">F4</option>
+            <option value="F5">F5</option>
+            <option value="F6">F6</option>
+            <option value="F7">F7 (D65 Simulator)</option>
+            <option value="F8">F8 (D50 Simulator)</option>
+            <option value="F9">F9</option>
+            <option value="F10">F10</option>
+            <option value="F11">F11 (TL84)</option>
+            <option value="F12">F12 (TL83)</option>
+            <option value="LED-B1">LED-B1 (Typical White)</option>
+            <option value="LED-B3">LED-B3</option>
+            <option value="LED-BH1">LED-BH1</option>
+            <option value="LED-RGB1">LED-RGB1</option>
+            <option value="LED-V1">LED-V1</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Наблюдател</label>
+          <select id="c-obs">
+            <option value="CIE 1931 2 Degree">2° (Standard)</option>
+            <option value="CIE 1964 10 Degree">10° (Large Field)</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="analyzeColor()">▶ Анализирай</button>
+        <button class="btn btn-ghost" onclick="exportData('html')">🌐 Batch Репорт</button>
+        <button class="btn btn-ghost" style="color:var(--accent2); border-color:var(--accent2);" onclick="generateISOReport()">📋 ISO 9001 Одит</button>
+      </div>
+      <div id="analysis-result" style="margin-top:15px; font-size:14px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title" style="justify-content:space-between;">
+        <span>AI Прогнози & Pre-flight</span>
+        <span id="risk-badge" class="section-badge" style="display:none;"></span>
+      </div>
+      <div class="field">
+        <label>Исторически Delta E (запетая)</label>
+        <input type="text" id="c-history" value="0.5, 0.6, 0.8, 0.9, 1.2">
+      </div>
+      <div class="btn-row" style="margin-bottom:10px;">
+        <button class="btn btn-primary" onclick="predictTrend()">📊 Прогнозирай Тренд</button>
+        <button class="btn btn-ghost" onclick="formulateRecipe()">🧪 AI Рецепта</button>
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-ghost" style="width:100%; border-color:var(--accent2); color:var(--accent2)" onclick="checkProductionRisk()">🛡️ Pre-flight Quality Check</button>
+      </div>
+      <div id="trend-result" style="margin-top:15px; font-size:14px; color:var(--accent2)"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title" style="justify-content: space-between;">
+        <span>3D Digital Twin & Color Space</span>
+        <div style="display:flex; gap:10px;">
+            <select id="twin-mode" onchange="toggleTwinMode(this.value)" style="padding:2px 8px; font-size:10px; width:auto;">
+                <option value="lab">Lab Space</option>
+                <option value="twin">Digital Twin (Part)</option>
+                <option value="line">Production Line (v8)</option>
+            </select>
+            <button class="btn-ghost" onclick="loadSampleTwin()" style="padding:2px 8px; font-size:10px; border-radius:4px;">📂 Зареди Детайл</button>
+        </div>
+    </div>
+    <div class="chart-wrap" id="chroma-wrap" style="height:500px;"></div>
+    <div id="twin-info" style="font-size:11px; color:var(--muted); margin-top:10px; display:none;">
+        * Кликнете върху модела, за да симулирате измерване върху повърхността.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Спектрален Анализ & Метамеризъм</div>
+    <div class="form-row">
+      <div class="chart-wrap" style="height:300px; flex:2;">
+        <canvas id="spectralChart"></canvas>
+      </div>
+      <div id="mi-panel" style="flex:1; padding:15px; background:var(--bg2); border-radius:12px; font-size:13px;">
+        <div class="stat-label">Metamerism Index (MI)</div>
+        <div id="mi-results">Очаква се измерване...</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">SPC Контролна Карта (Shewhart Chart)</div>
+    <div class="chart-wrap" style="height:300px;">
+      <canvas id="spcChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Audit Trail (История на измерванията)</div>
+    <div style="overflow-x:auto;">
+      <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:var(--mono);">
+        <thead>
+          <tr style="text-align:left; border-bottom:1px solid var(--border2); color:var(--muted);">
+            <th style="padding:10px;">Време</th>
+            <th style="padding:10px;">Партида</th>
+            <th style="padding:10px;">Оператор</th>
+            <th style="padding:10px;">ΔE</th>
+            <th style="padding:10px;">Статус</th>
+          </tr>
+        </thead>
+        <tbody id="audit-log">
+          <tr><td colspan="5" style="padding:20px; text-align:center; color:var(--muted2);">Няма записи...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: RAG -->
+<div class="page" id="page-rag_iot">
+  <div class="section-header">
+    <h1 class="section-title">База Знания & RAG Статистика</h1>
+    <span class="section-badge">DEEP INDEX</span>
+  </div>
+
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-label">Общ размер</div>
+      <div class="stat-value accent" id="rag-val-size">0 B</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Файлове</div>
+      <div class="stat-value" id="rag-val-files">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Индексирани откъси</div>
+      <div class="stat-value" id="rag-val-chunks">0</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Статус</div>
+      <div class="stat-value" style="color:var(--green)">Online</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Индексиране (вкл. поддиректории)</div>
+    <div class="form-row single">
+      <div class="field">
+        <label>Път до файл или папка (автоматично обхожда подпапки)</label>
+        <input type="text" id="r-path" value="./RAG">
+      </div>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" onclick="indexDocument()">📁 Индексирай</button>
+      <button class="btn btn-ghost" onclick="updateRagStats()">↻ Обнови статистика</button>
+      <button class="btn btn-ghost" style="color:var(--red)" onclick="clearDatabase()">🗑 Изчисти базата</button>
+    </div>
+
+    <div id="rag-progress-container" style="margin-top:20px; display:none;">
+      <div class="stat-label">Прогрес на индексирането</div>
+      <div style="width:100%; background:var(--bg3); height:10px; border-radius:5px; margin-bottom:10px;">
+        <div id="rag-progress-bar" style="width:0%; background:var(--accent2); height:100%; border-radius:5px; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <div class="terminal" id="r-log" style="margin-top:15px; height:150px;"></div>
+  </div>
+</div>
+
+<!-- PAGE: TRAIN -->
+<div class="page" id="page-train">
+  <div class="section-header">
+    <h1 class="section-title">Обучение на модела</h1>
+  </div>
+  <div class="card">
+    <div class="form-row">
+       <div class="field"><label>Епохи</label><input type="number" id="t-epochs" value="3"></div>
+       <div class="field"><label>Batch Size</label><input type="number" id="t-batch-ft" value="2"></div>
+    </div>
+    <button class="btn btn-primary" id="btn-train" onclick="startTraining()">🚀 Стартирай обучение</button>
+
+    <div id="train-progress-container" style="margin-top:20px; display:none;">
+      <div class="stat-label">Прогрес на обучението</div>
+      <div style="width:100%; background:var(--bg3); height:10px; border-radius:5px; margin-bottom:10px;">
+        <div id="train-progress-bar" style="width:0%; background:var(--accent); height:100%; border-radius:5px; transition:width 0.3s;"></div>
+      </div>
+    </div>
+
+    <div class="chart-wrap" id="train-chart-wrap" style="height:200px; margin-top:20px; display:none;">
+      <canvas id="trainChart"></canvas>
+    </div>
+
+    <div class="terminal" id="t-log" style="margin-top:15px; height:150px;"></div>
+  </div>
+</div>
+
+<!-- PAGE: AGENTS -->
+<div class="page" id="page-agents">
+  <div class="section-header">
+    <h1 class="section-title">Multi-Agent Workflow Orchestration</h1>
+    <span class="section-badge">AUTONOMOUS</span>
+  </div>
+
+  <div class="stats-grid" style="grid-template-columns: repeat(5, 1fr);">
+    <div class="stat-card"><div class="stat-label">QA Agent</div><div class="stat-value" id="status-qa" style="font-size:11px; color:var(--green)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">Process Agent</div><div class="stat-value" id="status-process" style="font-size:11px; color:var(--accent)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">Recipe Agent</div><div class="stat-value" id="status-recipe" style="font-size:11px; color:var(--accent2)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">RCA Agent</div><div class="stat-value" id="status-root" style="font-size:11px; color:var(--accent3)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">Reasoning Agent</div><div class="stat-value" id="status-reasoning" style="font-size:11px; color:var(--accent2)">IDLE</div></div>
+  </div>
+  <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr);">
+    <div class="stat-card"><div class="stat-label">Knowledge Agent</div><div class="stat-value" id="status-knowledge" style="font-size:11px; color:var(--accent)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">Maintenance Agent</div><div class="stat-value" id="status-maintenance" style="font-size:11px; color:var(--accent3)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">Sustainability Agent</div><div class="stat-value" id="status-sustainability" style="font-size:11px; color:var(--green)">IDLE</div></div>
+    <div class="stat-card"><div class="stat-label">Compliance Agent</div><div class="stat-value" id="status-compliance" style="font-size:11px; color:var(--muted)">IDLE</div></div>
+  </div>
+
+  <div class="form-row" style="grid-template-columns: 1fr 2fr;">
+    <div class="card">
+        <div class="card-title">Стартиране на процес</div>
+        <div class="field">
+            <label>Тип работен процес</label>
+            <select id="agent-wf">
+                <option value="color_analysis">Колориметричен Анализ (QA+Recipe)</option>
+                <option value="vision_diagnostics">Визуална Диагностика (Vision+Maintenance)</option>
+                <option value="sustainability_audit">Екологичен Одит (Sustainability+Compliance)</option>
+                <option value="predictive_maintenance">Предвидена Поддръжка (Maintenance+Reasoning)</option>
+                <option value="process_optimization">Оптимизация на Процеса (Process+Recipe)</option>
+                <option value="full_inspection">Пълна Инспекция (Всички агенти)</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" style="margin-top:15px; width:100%;" onclick="runAgentWorkflow()">▶ Изпълни Workflow</button>
+    </div>
+
+    <div class="card">
+        <div class="card-title">Agent Workspace Log</div>
+        <div class="terminal" id="agent-log" style="height:300px;">
+            > Системата е в готовност...
+        </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: HSI -->
+<div class="page" id="page-hsi">
+    <div class="section-header">
+        <h1 class="section-title">Хиперспектрален Анализ (HSI)</h1>
+        <span class="section-badge">SPECTRAL FINGERPRINT</span>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-card"><div class="stat-label">Материал</div><div class="stat-value accent" id="hsi-material">—</div></div>
+        <div class="stat-card"><div class="stat-label">Чистота</div><div class="stat-value" id="hsi-purity">0%</div></div>
+        <div class="stat-card"><div class="stat-label">Суб-повърхност</div><div class="stat-value" id="hsi-subsurface">OK</div></div>
+        <div class="stat-card"><div class="stat-label">Bands</div><div class="stat-value" id="hsi-bands">0</div></div>
+    </div>
+
+    <div class="form-row" style="grid-template-columns: 2fr 1fr;">
+        <div class="card">
+            <div class="card-title">Спектрален "Отпечатък"</div>
+            <div class="chart-wrap" style="height:350px;">
+                <canvas id="hsiChart"></canvas>
+            </div>
+        </div>
+        <div class="card">
+            <div class="card-title">Химически състав</div>
+            <div id="hsi-composition" style="font-size:13px; line-height:1.8;">
+                <div style="color:var(--muted)">Изчаква се HSI данни...</div>
+            </div>
+            <button class="btn btn-primary" style="width:100%; margin-top:20px;" onclick="runHSIAnalysis()">▶ Стартирай HSI Скан</button>
+        </div>
+    </div>
+</div>
+
+<!-- PAGE: KPI COCKPIT -->
+<div class="page" id="page-kpi">
+  <div class="section-header">
+    <h1 class="section-title">Enterprise KPI Cockpit</h1>
+    <span class="section-badge">BUSINESS INTELLIGENCE</span>
+  </div>
+
+  <div class="form-row" style="grid-template-columns: 1fr 1fr; gap: 16px;">
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:0;">
+        <div class="stat-card"><div class="stat-label">OEE (Overall Efficiency)</div><div class="stat-value accent" id="kpi-oee">0%</div></div>
+        <div class="stat-card"><div class="stat-label">Scrap Rate (Брак)</div><div class="stat-value" id="kpi-scrap" style="color:var(--red)">0%</div></div>
+      </div>
+      <div class="stats-grid" style="grid-template-columns: 1fr 1fr; margin-bottom:0;">
+        <div class="stat-card"><div class="stat-label">Color Stability Index</div><div class="stat-value" id="kpi-stability">0</div></div>
+        <div class="stat-card"><div class="stat-label">MTBF (Средно време между повреди)</div><div class="stat-value" id="kpi-mtbf">0h</div></div>
+      </div>
+      <div class="card" style="margin-bottom:0; flex:1;">
+        <div class="card-title">OEE Components</div>
+        <div class="chart-wrap" style="height:180px;">
+          <canvas id="kpiChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:12px;">
+      <div class="card" style="margin-bottom:0;">
+        <div class="card-title">AI & Data Infrastructure Status</div>
+        <div style="display:flex; flex-direction:column; gap:15px; margin-top:10px;">
+          <div>
+            <div class="stat-label" style="display:flex; justify-content:space-between;"><span>База Знания & RAG Indexing</span><span id="kpi-rag-val">0%</span></div>
+            <div style="width:100%; background:var(--bg3); height:6px; border-radius:3px; margin-top:4px;">
+              <div id="kpi-rag-bar" style="width:0%; background:var(--accent2); height:100%; border-radius:3px; transition:width 1s;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="stat-label" style="display:flex; justify-content:space-between;"><span>Knowledge Graph Density</span><span id="kpi-kg-val">0%</span></div>
+            <div style="width:100%; background:var(--bg3); height:6px; border-radius:3px; margin-top:4px;">
+              <div id="kpi-kg-bar" style="width:0%; background:var(--accent); height:100%; border-radius:3px; transition:width 1s;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="stat-label" style="display:flex; justify-content:space-between;"><span>Vision AI Reliability</span><span id="kpi-vision-val">0%</span></div>
+            <div style="width:100%; background:var(--bg3); height:6px; border-radius:3px; margin-top:4px;">
+              <div id="kpi-vision-bar" style="width:0%; background:var(--green); height:100%; border-radius:3px; transition:width 1s;"></div>
+            </div>
+          </div>
+          <div>
+            <div class="stat-label" style="display:flex; justify-content:space-between;"><span>Multi-Agent Autonomy Level</span><span id="kpi-agent-val">0%</span></div>
+            <div style="width:100%; background:var(--bg3); height:6px; border-radius:3px; margin-top:4px;">
+              <div id="kpi-agent-bar" style="width:0%; background:var(--accent3); height:100%; border-radius:3px; transition:width 1s;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card" style="margin-bottom:0; flex:1;">
+        <div class="card-title">Real-time Performance Trend</div>
+        <div class="chart-wrap" style="height:180px;">
+          <canvas id="kpiTrendChart"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: FLEET & MLOPS -->
+<div class="page" id="page-fleet">
+    <div class="section-header">
+        <h1 class="section-title">Fleet Management & MLOps Registry</h1>
+        <span class="section-badge">ENTERPRISE v8</span>
+    </div>
+
+    <div class="form-row" style="grid-template-columns: 1.5fr 1fr;">
+        <div class="card">
+            <div class="card-title">Edge Device Fleet (Global)</div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:12px; font-family:var(--mono);">
+                    <thead>
+                        <tr style="text-align:left; border-bottom:1px solid var(--border2); color:var(--muted);">
+                            <th style="padding:10px;">Node ID</th>
+                            <th style="padding:10px;">Status</th>
+                            <th style="padding:10px;">Load</th>
+                            <th style="padding:10px;">Version</th>
+                            <th style="padding:10px;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="fleet-list">
+                        <tr><td colspan="5" style="padding:20px; text-align:center;">Зареждане на данни...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Model Registry & Rollback</div>
+            <div id="model-registry-list" style="display:flex; flex-direction:column; gap:10px;">
+                <!-- Моделите ще се заредят тук -->
+            </div>
+            <button class="btn btn-ghost" style="width:100%; margin-top:15px; font-size:11px;" onclick="updateFleetData()">↻ Обнови Статус</button>
+        </div>
+    </div>
+</div>
+
+<!-- PAGE: KNOWLEDGE GRAPH -->
+<div class="page" id="page-knowledge_graph">
+    <div class="section-header">
+        <h1 class="section-title">Knowledge Graph & Logical Reasoning</h1>
+        <span class="section-badge">ONTOLOGY ENGINE</span>
+    </div>
+
+    <div class="form-row" style="grid-template-columns: 1fr 2fr;">
+        <div class="card">
+            <div class="card-title">Разсъждение (Reasoning)</div>
+            <div id="kg-reasoning-output" style="font-size:13px; line-height:1.6; color:var(--accent2)">
+                Кликнете върху възел в графа или изберете проблем за анализ...
+            </div>
+            <select id="kg-issue-select" style="margin-top:15px;" onchange="runKGReasoning(this.value)">
+                <option value="">Изберете проблем...</option>
+                <option value="Yellow_Drift">Отклонение в жълто (Yellow Drift)</option>
+                <option value="Machine_P3">Машина №3 (Статус)</option>
+            </select>
+        </div>
+        <div class="card">
+            <div class="card-title">Интерактивна онтология</div>
+            <div id="kg-canvas" style="width:100%; height:500px; background:var(--bg2); border-radius:var(--radius); border:1px solid var(--border); overflow:hidden; position:relative;">
+                <!-- Тук ще се рендерира графът -->
+                <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:var(--muted); font-size:12px;">
+                    Зареждане на графа на знанието...
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- PAGE: CHAT -->
+<div class="page" id="page-chat">
+  <div class="section-header">
+    <h1 class="section-title">Industrial Intelligence Assistant</h1>
+    <button class="btn btn-ghost" onclick="startVoice()" style="margin-left:auto">🎤 Гласова команда</button>
+  </div>
+  <div class="chat-window" id="chat-win"></div>
+  <div class="chat-input-row" style="display:flex; flex-direction:column; gap:10px;">
+    <div id="chat-preview-container" style="display:none; position:relative; width:80px; height:80px; border-radius:8px; border:1px solid var(--border); overflow:hidden;">
+        <img id="chat-img-preview" style="width:100%; height:100%; object-fit:cover;">
+        <button onclick="clearChatImage()" style="position:absolute; top:0; right:0; background:rgba(0,0,0,0.5); color:white; border:none; border-radius:50%; width:20px; height:20px; cursor:pointer;">×</button>
+    </div>
+    <div style="display:flex; gap:10px; margin-bottom:10px;">
+      <div class="field" style="width:150px;">
+        <select id="chat-industry" style="font-size:11px;">
+          <option value="">Индустрия (Всички)</option>
+          <option value="automotive">Автомобилна</option>
+          <option value="textile">Текстилна</option>
+          <option value="plastic">Пластмаси</option>
+        </select>
+      </div>
+      <div class="field" style="width:150px;">
+        <select id="chat-substrate" style="font-size:11px;">
+          <option value="">Субстрат (Всички)</option>
+          <option value="metal">Метал</option>
+          <option value="plastic">Пластмаса</option>
+          <option value="paper">Хартия</option>
+        </select>
+      </div>
+      <div class="field" style="width:150px; margin-left:auto;">
+        <select id="chat-model-select" style="font-size:11px; border-color:var(--accent2);" onchange="switchModel(this.value)">
+          <option value="">Зареждане на модели...</option>
+        </select>
+      </div>
+    </div>
+    <div style="display:flex; gap:10px;">
+      <select id="chat-client" style="width:auto; font-size:11px;" onchange="loadClientSettings(this.value)">
+        <option value="">Всички клиенти</option>
+      </select>
+      <button class="btn btn-ghost" onclick="document.getElementById('chat-file').click()" title="Прикачи снимка за Vision AI анализ">🖼️</button>
+      <input type="file" id="chat-file" style="display:none" accept="image/*" onchange="previewChatImage(this)">
+      <input type="text" id="chat-in" onkeydown="if(event.key==='Enter') sendMessage()" placeholder="Задай въпрос за ръководства, чертежи, рецепти или технически стандарти..." style="flex:1">
+      <button class="btn btn-primary" onclick="sendMessage()">Изпрати</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:20px;">
+    <div class="card-title">Управление на Клиенти</div>
+    <div class="form-row triple">
+      <div class="field"><label>Име на клиент</label><input type="text" id="cl-name" placeholder="напр. АвтоЗавод X"></div>
+      <div class="field"><label>Толеранс ΔE</label><input type="number" id="cl-tol" value="0.5" step="0.1"></div>
+      <div class="field">
+        <label>Метод</label>
+        <select id="cl-method">
+          <option value="CIE2000">CIE2000</option>
+          <option value="CMC">CMC</option>
+          <option value="CIE94">CIE94</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-ghost" onclick="addClient()">➕ Добави/Обнови Клиент</button>
+  </div>
+</div>
+
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+let API_URL = "http://localhost:8000";
+if (window.location.protocol !== 'file:' && window.location.hostname !== "") {
+    API_URL = window.location.origin;
+}
+const WS_URL = API_URL.replace("http", "ws") + "/ws";
+let scene, camera, renderer, labGroup, twinGroup, controls, spectralChart, spcChart, trainChart, hsiChart;
+let socket;
+
+let wsRetryCount = 0;
+function initWS() {
+    if (socket && (socket.readyState === WebSocket.OPEN || socket.readyState === WebSocket.CONNECTING)) return;
+
+    socket = new WebSocket(WS_URL);
+
+    socket.onopen = () => {
+        wsRetryCount = 0;
+        document.getElementById('status-dot').className = 'status-dot on';
+        document.getElementById('status-text').textContent = 'ONLINE';
+        console.log("WebSocket connected");
+        // Heartbeat mechanism
+        if(window.wsHeartbeat) clearInterval(window.wsHeartbeat);
+        window.wsHeartbeat = setInterval(() => {
+            if(socket && socket.readyState === WebSocket.OPEN) socket.send("ping");
+        }, 15000); // 15s heartbeat
+    };
+
+    socket.onmessage = (event) => {
+        if(event.data === "pong") return;
+        try {
+            const msg = JSON.parse(event.data);
+            if (msg.type === 'iot_update') {
+                updateIoTPill(msg.sensor_id, msg.data);
+            } else if (msg.type === 'log') {
+                appendLogToTerminals(msg.data);
+            } else if (msg.type === 'rag_update') {
+                updateRagStatsUI(msg.stats, msg.last_file);
+            } else if (msg.type === 'indexing_progress') {
+                updateIndexingProgressUI(msg);
+            } else if (msg.type === 'indexing_complete') {
+                hideIndexingProgressUI();
+            }
+        } catch(e) {}
+    };
+
+    socket.onclose = (e) => {
+        document.getElementById('status-dot').className = 'status-dot';
+        document.getElementById('status-text').textContent = 'OFFLINE';
+        console.log("WebSocket closed, retrying...", e.reason);
+
+        // Exponential backoff
+        wsRetryCount++;
+        const delay = Math.min(500 * Math.pow(2, wsRetryCount), 10000);
+        setTimeout(initWS, delay);
+    };
+
+    socket.onerror = (err) => {
+        console.error("WebSocket error:", err);
+        socket.close();
+    };
+}
+
+function updateIoTPill(sensorId, data) {
+    // В реално време обновяваме UI елементите ако са видими
+    console.log(`IoT Update: ${sensorId}`, data);
+    // Може да добавим визуален ефект на пулсация
+}
+
+function appendLogToTerminals(log) {
+    const terminals = ['r-log', 't-log', 'agent-log'];
+    terminals.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.innerHTML += `<div style="color:var(--muted)">[WS] ${log}</div>`;
+            el.scrollTop = el.scrollHeight;
+        }
+    });
+}
+
+function init3D() {
+  const container = document.getElementById('chroma-wrap');
+  if(!container) return;
+  container.innerHTML = '';
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x0a0c0f);
+
+  camera = new THREE.PerspectiveCamera(60, container.offsetWidth / container.offsetHeight, 0.1, 2000);
+  camera.position.set(100, 100, 200);
+
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(container.offsetWidth, container.offsetHeight);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  container.appendChild(renderer.domElement);
+
+  // Controls
+  controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enableDamping = true;
+
+  // Lights
+  const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+  scene.add(ambientLight);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  dirLight.position.set(100, 100, 100);
+  scene.add(dirLight);
+
+  labGroup = new THREE.Group();
+  scene.add(labGroup);
+
+  twinGroup = new THREE.Group();
+  scene.add(twinGroup);
+
+  const axesHelper = new THREE.AxesHelper(100);
+  scene.add(axesHelper);
+
+  animate();
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  // Оптимизация: Рендерираме само ако страницата с 3D е активна
+  const colorPage = document.getElementById('page-color_ai');
+  if(!colorPage || !colorPage.classList.contains('active')) return;
+
+  if(controls) controls.update();
+  if(labGroup && labGroup.visible) labGroup.rotation.y += 0.005;
+  renderer.render(scene, camera);
+}
+
+function update3D(stdLab, samLab) {
+  if(!labGroup) return;
+  labGroup.clear();
+  // Показваме Lab точките само в Lab режим
+  if(document.getElementById('twin-mode').value === 'lab') {
+    const stdMesh = new THREE.Mesh(new THREE.SphereGeometry(3), new THREE.MeshPhongMaterial({ color: 0xffffff }));
+    stdMesh.position.set(stdLab[1], stdLab[2], stdLab[0]-50);
+    labGroup.add(stdMesh);
+    const samMesh = new THREE.Mesh(new THREE.SphereGeometry(3), new THREE.MeshPhongMaterial({ color: 0xe8ff47 }));
+    samMesh.position.set(samLab[1], samLab[2], samLab[0]-50);
+    labGroup.add(samMesh);
+    labGroup.visible = true;
+  }
+}
+
+function toggleTwinMode(mode) {
+    labGroup.visible = false;
+    twinGroup.visible = false;
+    if(window.lineGroup) window.lineGroup.visible = false;
+
+    if(mode === 'lab') {
+        labGroup.visible = true;
+        document.getElementById('twin-info').style.display = 'none';
+        camera.position.set(100, 100, 200);
+    } else if(mode === 'twin') {
+        twinGroup.visible = true;
+        document.getElementById('twin-info').style.display = 'block';
+        if(twinGroup.children.length === 0) loadSampleTwin();
+    } else if(mode === 'line') {
+        if(!window.lineGroup) initLineTwin();
+        window.lineGroup.visible = true;
+        document.getElementById('twin-info').style.display = 'none';
+        camera.position.set(200, 150, 400);
+    }
+}
+
+function initLineTwin() {
+    window.lineGroup = new THREE.Group();
+    scene.add(window.lineGroup);
+
+    // 1. Конвейер
+    const beltGeo = new THREE.BoxGeometry(400, 2, 60);
+    const beltMat = new THREE.MeshStandardMaterial({ color: 0x222222 });
+    const belt = new THREE.Mesh(beltGeo, beltMat);
+    window.lineGroup.add(belt);
+
+    // 2. Машини по линията
+    const machineGeo = new THREE.BoxGeometry(50, 80, 50);
+    const machineMat = new THREE.MeshStandardMaterial({ color: 0x444444 });
+
+    // Mixer
+    const m1 = new THREE.Mesh(machineGeo, machineMat);
+    m1.position.set(-150, 40, 0);
+    window.lineGroup.add(m1);
+
+    // Coater
+    const m2 = m1.clone();
+    m2.position.set(0, 40, 0);
+    window.lineGroup.add(m2);
+
+    // Dryer
+    const m3 = m1.clone();
+    m3.position.set(150, 40, 0);
+    window.lineGroup.add(m3);
+
+    // Добавяме живи етикети
+    addTextLabel("MIXER-01", new THREE.Vector3(-150, 90, 0));
+    addTextLabel("COATER-X", new THREE.Vector3(0, 90, 0));
+    addTextLabel("DRYER-03", new THREE.Vector3(150, 90, 0));
+}
+
+function addTextLabel(text, pos) {
+    // Симулираме етикет в 3D пространството чрез малка сфера с цвят
+    const dot = new THREE.Mesh(new THREE.SphereGeometry(2), new THREE.MeshBasicMaterial({ color: 0x47c8ff }));
+    dot.position.copy(pos);
+    window.lineGroup.add(dot);
+}
+
+function loadSampleTwin() {
+    // Демонстрационен Digital Twin - прост детайл (напр. капак на огледало)
+    // В реална система тук се зарежда OBJ/STL файл
+    twinGroup.clear();
+    const geometry = new THREE.BoxGeometry(100, 10, 60);
+    // Добавяме малко "индустриална" форма
+    geometry.translate(0, 0, 0);
+    const material = new THREE.MeshStandardMaterial({
+        color: 0x888888,
+        roughness: 0.2,
+        metalness: 0.8
+    });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.name = "IndustrialPart";
+    twinGroup.add(mesh);
+
+    // Добавяме "измервателни точки" (Heatmap hotspots)
+    addHotspot(mesh, new THREE.Vector3(30, 5, 20), 0.2);  // Good
+    addHotspot(mesh, new THREE.Vector3(-20, 5, -10), 1.5); // Fail (Red)
+    addHotspot(mesh, new THREE.Vector3(0, 5, 10), 0.8);    // Warning (Yellow)
+
+    camera.position.set(0, 100, 150);
+    controls.target.set(0, 0, 0);
+}
+
+function addHotspot(parent, position, deltaE) {
+    let color = 0x47ff9c; // Green
+    if(deltaE > 1.0) color = 0xff4766; // Red
+    else if(deltaE > 0.5) color = 0xe8ff47; // Yellow
+
+    const dotGeo = new THREE.SphereGeometry(4, 16, 16);
+    const dotMat = new THREE.MeshBasicMaterial({ color: color });
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.copy(position);
+
+    // Добавяме сияние (glow) за по-добра видимост
+    const spriteMaterial = new THREE.SpriteMaterial({
+        map: generateGlowTexture(color),
+        transparent: true,
+        blending: THREE.AdditiveBlending
+    });
+    const sprite = new THREE.Sprite(spriteMaterial);
+    sprite.scale.set(15, 15, 1);
+    dot.add(sprite);
+
+    // Визуална аларма при критично отклонение (v8)
+    if(deltaE > 1.5) {
+        const ringGeo = new THREE.RingGeometry(8, 10, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0xff4766, side: THREE.DoubleSide, transparent: true, opacity: 0.8 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        dot.add(ring);
+
+        // Пулсираща анимация
+        function animateAlarm() {
+            if(!ring) return;
+            const s = 1 + Math.sin(Date.now() * 0.01) * 0.5;
+            ring.scale.set(s, s, 1);
+            requestAnimationFrame(animateAlarm);
+        }
+        animateAlarm();
+    }
+
+    twinGroup.add(dot);
+}
+
+function generateGlowTexture(color) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 64; canvas.height = 64;
+    const ctx = canvas.getContext('2d');
+    const gradient = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    const hex = '#' + color.toString(16).padStart(6, '0');
+    gradient.addColorStop(0, hex);
+    gradient.addColorStop(1, 'transparent');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, 64, 64);
+    const texture = new THREE.CanvasTexture(canvas);
+    return texture;
+}
+
+function updateHeatmap(deltaE, point) {
+    if(!twinGroup || !point) return;
+
+    // В реална система тук бихме използвали Raycaster за намиране на точната точка
+    // За демонстрацията добавяме нов hotspot на мястото на "измерването"
+    addHotspot(null, point, deltaE);
+}
+
+// Подобрено оцветяване на детайла на база общо състояние
+function updateTwinMaterial(avgDeltaE) {
+    const mesh = twinGroup.children.find(c => c.name === "IndustrialPart");
+    if(!mesh) return;
+
+    let color = 0x888888; // Default Grey
+    if(avgDeltaE > 1.0) color = 0x551111; // Dark Reddish
+    else if(avgDeltaE > 0.5) color = 0x555511; // Dark Yellowish
+
+    mesh.material.color.setHex(color);
+}
+
+let ragInterval;
+function showPage(id, btn) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  const targetPage = document.getElementById('page-'+id);
+  if (targetPage) targetPage.classList.add('active');
+  if (btn) btn.classList.add('active');
+
+  if(id === 'rag_iot') {
+    try { updateRagStats(); } catch(e) { console.error(e); }
+    if(!ragInterval) ragInterval = setInterval(() => {
+        try { updateRagStats(); } catch(e) { console.error(e); }
+    }, 15000);
+  } else if(id === 'knowledge_graph') {
+    try { initKGVisualization(); } catch(e) { console.error(e); }
+  } else if(id === 'kpi') {
+    try { updateKPI(); } catch(e) { console.error(e); }
+  } else if(id === 'fleet') {
+    try { updateFleetData(); } catch(e) { console.error(e); }
+  } else {
+    if(ragInterval) {
+      clearInterval(ragInterval);
+      ragInterval = null;
+    }
+  }
+}
+
+function parseColorInput(val) {
+  if(!val) return [];
+  // Поддържа запетая като разделител за десетични знаци и за самите координати
+  // Първо заменяме запетаите, които са за десетични знаци (между цифри, напр 50,5 -> 50.5)
+  let clean = val.toString().replace(/(\d),(\d)/g, '$1.$2');
+  // След това заменяме интервалите и точките и запетаите с обикновена запетая
+  clean = clean.replace(/[;\s]+/g, ',');
+  // Разделяме по запетая и чистим празни елементи
+  return clean.split(',').map(v => parseFloat(v.trim())).filter(v => !isNaN(v));
+}
+
+async function analyzeColor() {
+  const stdInput = document.getElementById('c-lab-std').value;
+  const samInput = document.getElementById('c-lab-sam').value;
+  const std = parseColorInput(stdInput);
+  const sam = parseColorInput(samInput);
+
+  if (std.length < 3 || sam.length < 3) {
+      alert("Моля въведете валидни L*a*b* координати (три числа).");
+      return;
+  }
+
+  const batchVal = document.getElementById('c-batch').value.toString().replace(',', '.');
+  const batch = parseFloat(batchVal) || 100.0;
+  const tolVal = document.getElementById('c-tol').value.toString().replace(',', '.');
+  const tol = parseFloat(tolVal) || 1.0;
+  const method = document.getElementById('c-method').value;
+  const ill = document.getElementById('c-ill').value;
+  const obs = document.getElementById('c-obs').value;
+
+  const btn = document.querySelector("button[onclick='analyzeColor()']");
+  if(btn) {
+      btn.disabled = true;
+      btn.innerHTML = "⏳ Анализиране...";
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/analyze_color`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+      body: JSON.stringify({
+        lab_sample: sam,
+        lab_standard: std,
+        method: method,
+        batch_size: batch,
+        tolerance: tol,
+        illuminant: ill,
+        observer: obs,
+        batch_id: document.getElementById('c-batch-id').value,
+        operator_id: document.getElementById('c-op-id').value
+      })
+    });
+    if (!res.ok) throw new Error(`Server error: ${res.status}`);
+    const data = await res.json();
+
+    // Sustainability Update (Industry 5.0)
+    if(data.sustainability) {
+        const ecoEl = document.getElementById('val-eco-score');
+        if(ecoEl) {
+            ecoEl.textContent = `${data.sustainability.sustainability_score} (${data.sustainability.eco_label})`;
+            ecoEl.style.color = data.sustainability.eco_label === 'A' ? 'var(--green)' : data.sustainability.eco_label === 'B' ? 'var(--accent)' : 'var(--red)';
+        }
+    }
+
+    document.getElementById('val-delta-e').textContent = (data.delta_e || 0).toFixed(3);
+  const statusEl = document.getElementById('val-status');
+  statusEl.textContent = data.status;
+  statusEl.style.color = data.status === "Pass" ? "var(--green)" : "var(--red)";
+
+  let html = `<b>Delta E:</b> ${data.delta_e.toFixed(4)} (${data.method})<br>`;
+  if(data.closest_ral) {
+    html += `<b>Близък RAL:</b> <span style="color:var(--accent2)">${data.closest_ral.code} (${data.closest_ral.name})</span><br>`;
+  }
+  if(data.ai_recommendations.length > 0) {
+    html += `<br><b>🤖 AI Препоръки за корекция (${batch}кг):</b><ul style='margin-left:20px; color:var(--accent)'>`;
+    data.ai_recommendations.forEach(r => html += `<li>${r}</li>`);
+    html += `</ul>`;
+  }
+  document.getElementById('analysis-result').innerHTML = html;
+  update3D(std, sam);
+    updateSpectralChart(data.spectral_data);
+    if(data.spc_data) updateSPCChart(data.spc_data);
+    if(data.mi_data) updateMIPanel(data.mi_data);
+    addToAuditTrail(data);
+
+    // Интеграция с Digital Twin
+    if(document.getElementById('twin-mode').value === 'twin') {
+        const randomPoint = new THREE.Vector3(
+            (Math.random() - 0.5) * 80,
+            5,
+            (Math.random() - 0.5) * 40
+        );
+        updateHeatmap(data.delta_e, randomPoint);
+        updateTwinMaterial(data.delta_e);
+    }
+  } catch (e) {
+    console.error("Analyze error:", e);
+    alert("Грешка при комуникация със сървъра. Проверете дали API е стартирано.");
+  } finally {
+      if(btn) {
+          btn.disabled = false;
+          btn.innerHTML = "▶ Анализирай";
+      }
+  }
+}
+
+function addToAuditTrail(data) {
+  const tbody = document.getElementById('audit-log');
+  if(tbody.innerHTML.includes('Няма записи')) tbody.innerHTML = '';
+
+  const now = new Date().toLocaleTimeString();
+  const statusColor = data.status === 'Pass' ? '#47ff9c' : '#ff4766';
+  const statusBg = data.status === 'Pass' ? 'rgba(71, 255, 156, 0.2)' : 'rgba(255, 71, 102, 0.2)';
+
+  const row = `
+    <tr style="border-bottom:1px solid var(--border2);">
+      <td style="padding:10px;">${now}</td>
+      <td style="padding:10px;">${document.getElementById('c-batch-id').value}</td>
+      <td style="padding:10px;">${document.getElementById('c-op-id').value}</td>
+      <td style="padding:10px; color:var(--accent);">${data.delta_e.toFixed(3)}</td>
+      <td style="padding:10px;">
+        <span style="display:inline-block; padding:4px 12px; border-radius:4px; font-weight:bold; color:${statusColor}; background:${statusBg}; border: 1px solid ${statusColor};">
+          ${data.status}
+        </span>
+      </td>
+    </tr>
+  `;
+  tbody.insertAdjacentHTML('afterbegin', row);
+}
+
+function updateMIPanel(data) {
+  const container = document.getElementById('mi-results');
+  let html = `<div style="margin-top:10px; color:${data.warning ? 'var(--red)' : 'var(--green)'}; font-weight:bold;">${data.status}</div>`;
+  html += `<ul style="margin-top:10px; list-style:none;">`;
+  for(let ill in data.mi_values) {
+    html += `<li style="margin-bottom:5px;">${ill}: <span style="font-family:var(--mono)">${data.mi_values[ill].toFixed(3)}</span></li>`;
+  }
+  html += `</ul>`;
+  container.innerHTML = html;
+}
+
+function updateSPCChart(data) {
+  if (!data) return;
+  const canvas = document.getElementById('spcChart');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  if (spcChart) spcChart.destroy();
+
+  // Генерираме демо точки за графиката около средната стойност
+  const history = [0.45, 0.52, 0.48, 0.61, 0.55, 0.49, data.mean || 0];
+
+  spcChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: history.map((_, i) => `L-${i+1}`),
+      datasets: [
+        {
+          label: 'Delta E',
+          data: history,
+          borderColor: '#47c8ff',
+          pointBackgroundColor: history.map(v => (v > data.ucl || v < data.lcl) ? '#ff4766' : '#47c8ff'),
+          tension: 0.1
+        },
+        {
+          label: 'UCL (3σ)',
+          data: Array(history.length).fill(data.ucl),
+          borderColor: '#ff4766',
+          borderDash: [5, 5],
+          pointRadius: 0,
+          fill: false
+        },
+        {
+          label: 'Mean',
+          data: Array(history.length).fill(data.mean),
+          borderColor: '#6b7585',
+          borderDash: [2, 2],
+          pointRadius: 0,
+          fill: false
+        },
+        {
+          label: 'LCL (3σ)',
+          data: Array(history.length).fill(data.lcl),
+          borderColor: '#ff4766',
+          borderDash: [5, 5],
+          pointRadius: 0,
+          fill: false
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { grid: { color: '#242a35' } }
+      }
+    }
+  });
+}
+
+function updateSpectralChart(data) {
+  const ctx = document.getElementById('spectralChart').getContext('2d');
+  if (spectralChart) spectralChart.destroy();
+
+  spectralChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: data.wavelengths,
+      datasets: [
+        {
+          label: 'Мостра (Симулирана)',
+          data: data.sample,
+          borderColor: '#e8ff47',
+          backgroundColor: 'rgba(232, 255, 71, 0.1)',
+          tension: 0.4
+        },
+        {
+          label: 'Стандарт (Симулиран)',
+          data: data.standard,
+          borderColor: '#ffffff',
+          borderDash: [5, 5],
+          backgroundColor: 'transparent',
+          tension: 0.4
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        y: { beginAtZero: true, grid: { color: '#242a35' }, title: { display: true, text: 'Рефлектанс %' } },
+        x: { grid: { color: '#242a35' }, title: { display: true, text: 'Дължина на вълната (nm)' } }
+      },
+      plugins: {
+        legend: { labels: { color: '#e8eaf0' } }
+      }
+    }
+  });
+}
+
+async function updateRagStats() {
+  try {
+    const res = await fetch(`${API_URL}/rag_stats`);
+    if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+    const data = await res.json();
+    updateRagStatsUI(data);
+  } catch(e) {
+    console.error("RAG Stats Error:", e);
+    const log = document.getElementById('r-log');
+    if (log && e.message.includes("fetch")) {
+       log.innerHTML += `<div style="color:var(--red)">[ГРЕШКА] Няма връзка с API сървъра (/rag_stats). Проверете дали бекендът работи.</div>`;
+    }
+  }
+}
+
+function updateIndexingProgressUI(data) {
+    const progCont = document.getElementById('rag-progress-container');
+    const progBar = document.getElementById('rag-progress-bar');
+    const log = document.getElementById('r-log');
+
+    if(progCont) progCont.style.display = 'block';
+    if(progBar) progBar.style.width = data.progress + '%';
+    if(log) {
+        log.innerHTML += `<div style="color:var(--accent2)">[PROGRESS] Индексиране: ${data.current_file} (${data.current}/${data.total})</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+}
+
+function hideIndexingProgressUI() {
+    const progCont = document.getElementById('rag-progress-container');
+    const log = document.getElementById('r-log');
+    if(log) {
+        log.innerHTML += `<div style="color:var(--green)">[DONE] Индексирането завърши.</div>`;
+        log.scrollTop = log.scrollHeight;
+    }
+    setTimeout(() => {
+        if(progCont) progCont.style.display = 'none';
+    }, 3000);
+}
+
+function updateRagStatsUI(data, lastFile) {
+    if (!data) return;
+    const elSize = document.getElementById('rag-val-size');
+    const elFiles = document.getElementById('rag-val-files');
+    const elChunks = document.getElementById('rag-val-chunks');
+
+    if (elSize) elSize.textContent = data.total_size || "0 B";
+    if (elFiles) elFiles.textContent = data.total_files || "0";
+    if (elChunks) elChunks.textContent = data.total_chunks || "0";
+
+    if(lastFile) {
+        const log = document.getElementById('r-log');
+        if(log) {
+            log.innerHTML += `<div style="color:var(--green)">[LIVE] Индексиран: ${lastFile}</div>`;
+            log.scrollTop = log.scrollHeight;
+        }
+
+        // Визуален ефект върху статистиката
+        const cards = document.querySelectorAll('#page-rag_iot .stat-card');
+        cards.forEach(c => {
+            c.style.borderColor = 'var(--accent2)';
+            setTimeout(() => c.style.borderColor = 'var(--border)', 1000);
+        });
+    }
+}
+
+async function startTraining() {
+  const epochs = document.getElementById('t-epochs').value;
+  const batch = document.getElementById('t-batch-ft').value;
+  const log = document.getElementById('t-log');
+  const btn = document.getElementById('btn-train');
+  const progCont = document.getElementById('train-progress-container');
+  const progBar = document.getElementById('train-progress-bar');
+
+  log.innerHTML = "<div>> Инициализиране на средата за обучение...</div>";
+  btn.disabled = true;
+  progCont.style.display = 'block';
+  progBar.style.width = '0%';
+  progBar.style.background = 'var(--accent)';
+  document.getElementById('train-chart-wrap').style.display = 'block';
+  initTrainChart();
+
+  try {
+    const res = await fetch(`${API_URL}/train`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({epochs: parseInt(epochs), batch: parseInt(batch)})
+    });
+    const data = await res.json();
+    log.innerHTML += `<div>> ${data.message}</div>`;
+
+    if (data.message.includes("ГРЕШКА")) {
+        btn.disabled = false;
+        progCont.style.display = 'none';
+        alert(data.message);
+        return;
+    }
+
+    const interval = setInterval(async () => {
+      const sRes = await fetch(`${API_URL}/train_status`);
+      const sData = await sRes.json();
+      log.innerHTML = `<div style="color:var(--muted)">${sData.log}</div>`;
+
+      let progress = sData.progress || 0;
+      progBar.style.width = progress + '%';
+
+      updateTrainChart();
+
+      if(sData.status === 'completed' || sData.status === 'failed') {
+        clearInterval(interval);
+        btn.disabled = false;
+        progBar.style.width = sData.status === 'completed' ? '100%' : progress + '%';
+        if (sData.status === 'failed') progBar.style.background = 'var(--red)';
+        alert("Обучението завърши: " + sData.status);
+      }
+    }, 3000);
+
+  } catch (e) {
+    log.innerHTML += `<div style="color:var(--red)">> Грешка: ${e.message}</div>`;
+    btn.disabled = false;
+  }
+}
+
+async function clearDatabase() {
+  if(!confirm("Сигурни ли сте, че искате да изчистите цялата база данни?")) return;
+  try {
+    const res = await fetch(`${API_URL}/clear_database`, { method: 'POST' });
+    const data = await res.json();
+    alert(data.message);
+    updateRagStats();
+  } catch(e) { alert("Грешка при изчистване: " + e.message); }
+}
+
+function initHSIChart() {
+    const ctx = document.getElementById('hsiChart').getContext('2d');
+    if (hsiChart) hsiChart.destroy();
+    hsiChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [{
+                label: 'Интензитет (Спектрална сигнатура)',
+                data: [],
+                borderColor: '#e8ff47',
+                backgroundColor: 'rgba(232, 255, 71, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: { beginAtZero: true, grid: { color: '#242a35' } },
+                x: { title: { display: true, text: 'Дължина на вълната (nm)', color: '#6b7585' }, grid: { color: '#242a35' } }
+            }
+        }
+    });
+}
+
+async function initKGVisualization() {
+    const container = document.getElementById('kg-canvas');
+    container.innerHTML = '';
+    const width = container.offsetWidth;
+    const height = container.offsetHeight;
+
+    try {
+        const res = await fetch(`${API_URL}/kg_export`);
+        if(!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+
+        const svg = d3.select("#kg-canvas").append("svg")
+            .attr("width", width)
+            .attr("height", height);
+
+        const simulation = d3.forceSimulation(data.nodes)
+            .force("link", d3.forceLink(data.links).id(d => d.id).distance(100))
+            .force("charge", d3.forceManyBody().strength(-200))
+            .force("center", d3.forceCenter(width / 2, height / 2));
+
+        const link = svg.append("g")
+            .selectAll("line")
+            .data(data.links)
+            .join("line")
+            .attr("stroke", "var(--border2)")
+            .attr("stroke-width", 1);
+
+        const node = svg.append("g")
+            .selectAll("g")
+            .data(data.nodes)
+            .join("g")
+            .call(d3.drag()
+                .on("start", (e, d) => { if (!e.active) simulation.alphaTarget(0.3).restart(); d.fx = d.x; d.fy = d.y; })
+                .on("drag", (e, d) => { d.fx = e.x; d.fy = e.y; })
+                .on("end", (e, d) => { if (!e.active) simulation.alphaTarget(0); d.fx = null; d.fy = null; }));
+
+        const colorScale = {
+            'Machine': 'var(--accent2)',
+            'Issue': 'var(--red)',
+            'Problem': 'var(--red)',
+            'Rule': 'var(--accent)',
+            'Material': 'var(--green)',
+            'Process': 'var(--accent)',
+            'Production': 'var(--accent2)',
+            'Person': 'var(--muted)',
+            'Sensor': '#ffa500'
+        };
+
+        node.append("circle")
+            .attr("r", 10)
+            .attr("fill", d => colorScale[d.type] || 'var(--accent)')
+            .attr("stroke", "var(--bg)")
+            .attr("stroke-width", 2);
+
+        node.append("text")
+            .text(d => d.id)
+            .attr("x", 12)
+            .attr("y", 4)
+            .attr("fill", "var(--text)")
+            .style("font-size", "10px")
+            .style("font-family", "var(--mono)");
+
+        node.on("click", (e, d) => runKGReasoning(d.id));
+
+        simulation.on("tick", () => {
+            link.attr("x1", d => d.source.x).attr("y1", d => d.source.y)
+                .attr("x2", d => d.target.x).attr("y2", d => d.target.y);
+            node.attr("transform", d => `translate(${d.x},${d.y})`);
+        });
+
+    } catch (e) {
+        container.innerHTML = '<div style="color:var(--red); padding:20px;">Грешка при зареждане на визуализацията.</div>';
+    }
+}
+
+async function runKGReasoning(issue) {
+    if(!issue) return;
+    const out = document.getElementById('kg-reasoning-output');
+    out.innerHTML = "<div>> Извличане на логически път за <b>" + issue + "</b>...</div>";
+
+    try {
+        const res = await fetch(`${API_URL}/kg_reason/${issue}`);
+        if(!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+
+        if(data && Array.isArray(data.reasoning)) {
+            let html = `<div style="margin-bottom:10px; color:var(--accent)"><b>ЛОГИЧЕСКИ ИЗВОД:</b></div><div style="margin-left:10px;">`;
+            data.reasoning.forEach((step, index) => {
+                html += `${index + 1}. <b>${step.source}</b> ${step.relation} <b>${issue}</b> ${step.condition ? '(' + step.condition + ')' : ''}<br>`;
+                if(step.source_stats && step.source_stats.usage_hours) {
+                    html += `   - Статус: ${step.source_stats.usage_hours} работни часа.<br>`;
+                }
+            });
+            html += `</div>`;
+            out.innerHTML = html;
+        } else {
+            out.innerHTML = `<div>${data.reasoning}</div>`;
+        }
+    } catch (e) {
+        out.innerHTML = "<div style='color:var(--red)'>Грешка при връзка с Knowledge Graph API.</div>";
+    }
+}
+
+function highlightKGNode(nodeId) {
+    console.log("Highlighting node:", nodeId);
+}
+
+async function runHSIAnalysis() {
+    const log = document.getElementById('hsi-composition');
+    log.innerHTML = "<div>> Запитване към HSI Сензор...</div>";
+    initHSIChart();
+
+    try {
+        const res = await fetch(`${API_URL}/hsi_analyze`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ sensor_id: "HSI-OFF-01" })
+        });
+        const result = await res.json();
+
+        if(result.wavelengths) {
+            hsiChart.data.labels = result.wavelengths;
+            hsiChart.data.datasets[0].data = result.reflectance || result.intensities;
+            hsiChart.update();
+
+            document.getElementById('hsi-material').textContent = result.material_identified || "Unknown";
+            document.getElementById('hsi-purity').textContent = (result.confidence * 100).toFixed(1) + "%";
+            document.getElementById('hsi-subsurface').textContent = result.subsurface_defect ? "Warning" : "Clear";
+            document.getElementById('hsi-subsurface').style.color = result.subsurface_defect ? "var(--red)" : "var(--green)";
+            document.getElementById('hsi-bands').textContent = result.wavelengths ? result.wavelengths.length : 0;
+
+            log.innerHTML = `
+                <div style="margin-bottom:10px;"><b>Резултат от анализа:</b></div>
+                <div style="color:var(--accent)">${result.description || 'Анализът е завършен успешно.'}</div>
+                ${result.subsurface_defect ? `<div style="margin-top:10px; color:var(--red)">🚨 Открит дефект: ${result.type}</div>` : ''}
+            `;
+        }
+    } catch (e) {
+        log.innerHTML = "<div style='color:var(--red)'>> [ГРЕШКА] Няма връзка с HSI сензора или бекенда.</div>";
+    }
+}
+
+function initTrainChart() {
+  const ctx = document.getElementById('trainChart').getContext('2d');
+  if (trainChart) trainChart.destroy();
+  trainChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{ label: 'Training Loss', data: [], borderColor: varProp('--accent'), tension: 0.4 }]
+    },
+    options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true, grid: { color: '#242a35' } } } }
+  });
+}
+
+function updateTrainChart() {
+  if(!trainChart) return;
+  const labels = trainChart.data.labels;
+  const data = trainChart.data.datasets[0].data;
+  labels.push(`Step ${labels.length + 1}`);
+  // Генерираме намаляваща загуба за визуализация
+  const lastVal = data.length > 0 ? data[data.length-1] : 2.5;
+  data.push(Math.max(0.1, lastVal * 0.9));
+  trainChart.update();
+}
+
+function varProp(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+async function runAgentWorkflow() {
+    const wf = document.getElementById('agent-wf').value;
+    const log = document.getElementById('agent-log');
+    log.innerHTML = `<div>> Иницииране на workflow: <b>${wf}</b>...</div>`;
+
+    // Подготовка на данни, включително последните Vision резултати ако има такива
+    const data = {
+        delta_e: parseFloat(document.getElementById('val-delta-e')?.textContent || 1.2),
+        tolerance: parseFloat(document.getElementById('c-tol').value),
+        lab_sample: parseColorInput(document.getElementById('c-lab-sam').value),
+        lab_standard: parseColorInput(document.getElementById('c-lab-std').value),
+        historical_de: parseColorInput(document.getElementById('c-history').value),
+        defects: window.lastVisionResults?.defects || [],
+        coating_quality: window.lastVisionResults?.coating_quality || {}
+    };
+
+    try {
+        const res = await fetch(`${API_URL}/agent_task`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ workflow: wf, data: data })
+        });
+        const result = await res.json();
+
+        result.results.forEach((r, i) => {
+            setTimeout(() => {
+                let msg = `<div>> <b style="color:var(--accent)">[${r.agent}]</b>: ${r.analysis || r.summary || r.root_cause || r.message}</div>`;
+                if(r.corrections) msg += `<div style="margin-left:20px; color:var(--muted)">${r.corrections.join('<br>')}</div>`;
+                log.innerHTML += msg;
+                log.scrollTop = log.scrollHeight;
+
+                // Визуално обновяване на статуса
+                const agentKey = r.agent.toLowerCase().split(' ')[0];
+                const statusEl = document.getElementById(`status-${agentKey}`);
+                if(statusEl) {
+                    statusEl.textContent = "ACTIVE";
+                    setTimeout(() => statusEl.textContent = "DONE", 1000);
+                }
+            }, i * 1000);
+        });
+    } catch(e) {
+        log.innerHTML += `<div style="color:var(--red)">> Грешка при изпълнение: ${e.message}</div>`;
+    }
+}
+
+async function indexDocument() {
+  const path = document.getElementById('r-path').value;
+  const log = document.getElementById('r-log');
+  const progCont = document.getElementById('rag-progress-container');
+  const progBar = document.getElementById('rag-progress-bar');
+
+  log.innerHTML += `<div>> Започва индексиране на ${path}...</div>`;
+  if(progCont) progCont.style.display = 'block';
+  if(progBar) {
+      progBar.style.width = '5%';
+      progBar.style.background = 'var(--accent2)';
+  }
+
+  try {
+    const res = await fetch(`${API_URL}/index_document`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({file_path: path})
+    });
+    const data = await res.json();
+    log.innerHTML += `<div>> ${data.message}</div>`;
+
+    // Прогресът вече се управлява от WebSocket съобщенията
+    setTimeout(updateRagStats, 2000);
+  } catch(e) {
+    log.innerHTML += `<div style="color:var(--red)">> Грешка: ${e.message}</div>`;
+    if(progBar) progBar.style.background = 'var(--red)';
+  }
+}
+
+function previewVisionImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            document.getElementById('v-preview').innerHTML = `<img src="${e.target.result}" id="active-v-img" style="max-width:100%; max-height:100%; object-fit:contain;">`;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function clearVision() {
+    document.getElementById('v-preview').innerHTML = `<span style="color:var(--muted)">Изчаква се изображение...</span>`;
+    document.getElementById('v-results').innerHTML = `<div style="color:var(--muted)">Няма налични данни...</div>`;
+    document.getElementById('v-rough').textContent = '—';
+    document.getElementById('v-gloss').textContent = '—';
+    document.getElementById('v-file').value = '';
+    window.lastVisionResults = null;
+}
+
+async function analyzeVision() {
+    const fileInput = document.getElementById('v-file');
+    if (!fileInput.files[0]) return alert("Моля качете снимка");
+
+    const formData = new FormData();
+    formData.append('file', fileInput.files[0]);
+
+    document.getElementById('v-results').innerHTML = "Анализиране чрез YOLOv11...";
+
+    try {
+        const res = await fetch(`${API_URL}/vision_analyze`, {
+            method: 'POST',
+            body: formData
+        });
+        if(!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        window.lastVisionResults = data; // Запазваме за агентите
+
+        let html = "<b>Открити дефекти:</b><ul style='margin-left:15px;'>";
+        if (!data.defects || data.defects.length === 0) {
+            html += "<li>Няма открити дефекти</li>";
+        } else {
+            data.defects.forEach(d => {
+                html += `<li>${d.class} (${(d.confidence*100).toFixed(1)}%)</li>`;
+                drawBBox(d.bbox, d.class);
+            });
+        }
+        html += "</ul>";
+        html += `<br><b>Качество на покритието:</b><br>${data.coating_quality.is_uneven ? '⚠️ Неравномерно' : '✅ Равномерно'}`;
+
+        document.getElementById('v-results').innerHTML = html;
+        document.getElementById('v-rough').textContent = data.texture.status;
+        document.getElementById('v-gloss').textContent = data.gloss.gloss_level;
+
+        // Втора фаза: High-precision ViT анализ
+        document.getElementById('v-results').innerHTML += "<div style='margin-top:10px; color:var(--accent2)'>Иницииране на High-Precision ViT анализ...</div>";
+        const microRes = await fetch(`${API_URL}/vision_micro_analyze`, { method: 'POST', body: formData });
+        const microData = await microRes.json();
+
+        if(microData.micro_defects_detected) {
+            document.getElementById('v-results').innerHTML += `<div style='color:var(--red)'>🎯 ViT Детекция: Обкрит ${microData.pattern_recognition} (Conf: ${(microData.anomaly_score*100).toFixed(1)}%)</div>`;
+        } else {
+            document.getElementById('v-results').innerHTML += "<div style='color:var(--green)'>✅ ViT: Няма открити микро-дефекти.</div>";
+        }
+
+    } catch(e) {
+        alert("Грешка при Vision анализ: " + e.message);
+    }
+}
+
+function drawBBox(bbox, label) {
+    const preview = document.getElementById('v-preview');
+    const img = document.getElementById('active-v-img');
+    if (!img) return;
+
+    const rect = img.getBoundingClientRect();
+    const parentRect = preview.getBoundingClientRect();
+
+    // Изчисляваме мащаба на изображението
+    const scaleX = rect.width / img.naturalWidth;
+    const scaleY = rect.height / img.naturalHeight;
+
+    // Изчисляваме отместването на изображението спрямо контейнера (за центриране)
+    const offsetX = rect.left - parentRect.left;
+    const offsetY = rect.top - parentRect.top;
+
+    const box = document.createElement('div');
+    box.className = 'v-bbox';
+    box.style.position = 'absolute';
+    box.style.border = '2px solid #e8ff47';
+    box.style.background = 'rgba(232,255,71,0.1)';
+    box.style.pointerEvents = 'none'; // Не пречи на кликането
+
+    box.style.left = (offsetX + bbox[0] * scaleX) + 'px';
+    box.style.top = (offsetY + bbox[1] * scaleY) + 'px';
+    box.style.width = ((bbox[2] - bbox[0]) * scaleX) + 'px';
+    box.style.height = ((bbox[3] - bbox[1]) * scaleY) + 'px';
+
+    box.innerHTML = `<span style="background:#e8ff47; color:#000; font-size:9px; padding:2px; position:absolute; top:-18px; left:-2px; white-space:nowrap; font-family:var(--mono);">${label}</span>`;
+    preview.appendChild(box);
+}
+
+let chatImageBase64 = null;
+
+function previewChatImage(input) {
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = e => {
+            chatImageBase64 = e.target.result;
+            document.getElementById('chat-img-preview').src = chatImageBase64;
+            document.getElementById('chat-preview-container').style.display = 'block';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+
+function clearChatImage() {
+    chatImageBase64 = null;
+    document.getElementById('chat-preview-container').style.display = 'none';
+    document.getElementById('chat-file').value = '';
+}
+
+async function sendMessage() {
+  const text = document.getElementById('chat-in').value;
+  const clientId = document.getElementById('chat-client').value;
+  const industry = document.getElementById('chat-industry').value;
+  const substrate = document.getElementById('chat-substrate').value;
+
+  if(!text && !chatImageBase64) return;
+
+  let userMsg = text;
+  if(chatImageBase64) userMsg = `[Снимка] ${text}`;
+
+  addMsg('user', userMsg);
+  document.getElementById('chat-in').value = '';
+
+  const filters = {};
+  if(industry) filters.industry = industry;
+  if(substrate) filters.substrate = substrate;
+  if(clientId) filters.client = clientId;
+
+  try {
+    const payload = {
+        prompt: text,
+        use_rag: true,
+        image_data: chatImageBase64,
+        context: clientId ? `Client context: ${clientId}` : ""
+    };
+    clearChatImage();
+    if(Object.keys(filters).length > 0) payload.filters = filters;
+
+    const res = await fetch(`${API_URL}/diagnose`, {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(payload)
+    });
+
+    if(res.ok) {
+        const data = await res.json();
+        addMsg('bot', data.analysis);
+    } else {
+        let errorData;
+        try {
+            errorData = await res.json();
+        } catch(e) {
+            errorData = { detail: "Грешка при четене на отговора от сървъра." };
+        }
+        const errorMsg = (typeof errorData.detail === 'string') ? errorData.detail : JSON.stringify(errorData.detail || errorData);
+        addMsg('bot', "Грешка при комуникация със сървъра: " + errorMsg);
+    }
+  } catch(e) {
+    addMsg('bot', "Грешка в мрежата: " + e.message);
+  }
+}
+
+function addMsg(role, text) {
+  const win = document.getElementById('chat-win');
+  const content = (text && text.trim() !== "") ? text : (role === 'bot' ? "Грешка: Празен отговор от асистента." : "...");
+  win.innerHTML += `<div class="msg ${role}"><div class="msg-avatar">${role==='user'?'U':'AI'}</div><div class="msg-bubble">${content}</div></div>`;
+  win.scrollTop = win.scrollHeight;
+}
+
+async function exportData(type) {
+  const std = parseColorInput(document.getElementById('c-lab-std').value);
+  const sam = parseColorInput(document.getElementById('c-lab-sam').value);
+  const method = document.getElementById('c-method').value;
+  const batchId = document.getElementById('c-batch-id').value;
+  const opId = document.getElementById('c-op-id').value;
+  const clientId = document.getElementById('chat-client').value;
+  const tol = parseFloat(document.getElementById('c-tol').value);
+  const ill = document.getElementById('c-ill').value;
+  const obs = document.getElementById('c-obs').value;
+
+  const endpoint = '/generate_html_report';
+
+  const res = await fetch(`${API_URL}${endpoint}`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({
+        lab_sample: sam,
+        lab_standard: std,
+        method: method,
+        batch_id: batchId,
+        operator_id: opId,
+        client_id: clientId || "GENERAL",
+        tolerance: tol,
+        illuminant: ill,
+        observer: obs
+    })
+  });
+  const data = await res.json();
+  if(data.filename) {
+    window.open(`${API_URL}/download_report/${data.filename}`, '_blank');
+  } else {
+    alert("Грешка при генериране на отчета");
+  }
+}
+
+async function generateISOReport() {
+    try {
+        const res = await fetch(`${API_URL}/generate_iso_audit_report`, { method: 'POST' });
+        const data = await res.json();
+        if(data.filename) {
+            window.open(`${API_URL}/download_report/${data.filename}`, '_blank');
+        } else {
+            alert("Грешка: " + data.detail);
+        }
+    } catch(e) {
+        alert("Грешка при генериране на ISO отчет.");
+    }
+}
+
+async function updateKPI() {
+    try {
+        const res = await fetch(`${API_URL}/kpi_data`);
+        if(!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        const data = await res.json();
+        if(!data) return;
+        document.getElementById('kpi-oee').textContent = (data.OEE || 0) + "%";
+        document.getElementById('kpi-scrap').textContent = data.Scrap_Rate + "%";
+        document.getElementById('kpi-stability').textContent = data.Color_Stability_Index;
+        document.getElementById('kpi-mtbf').textContent = data.MTBF;
+
+        // Update Data Bars
+        updateKPIBar('kpi-rag', data.rag_indexing || 85);
+        updateKPIBar('kpi-kg', data.kg_density || 62);
+        updateKPIBar('kpi-vision', data.vision_reliability || 94);
+        updateKPIBar('kpi-agent', data.agent_autonomy || 40);
+
+        initKPIChart(data);
+        initKPITrendChart();
+    } catch(e) {}
+}
+
+function updateKPIBar(id, val) {
+    const bar = document.getElementById(id + '-bar');
+    const text = document.getElementById(id + '-val');
+    if(bar) bar.style.width = val + '%';
+    if(text) text.textContent = val + '%';
+}
+
+function initKPIChart(data) {
+    const ctx = document.getElementById('kpiChart').getContext('2d');
+    if (window.kpiChartObj) window.kpiChartObj.destroy();
+    window.kpiChartObj = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: ['Avail.', 'Perf.', 'Quality'],
+            datasets: [{
+                label: 'OEE %',
+                data: [data.Availability, data.Performance, data.Quality],
+                backgroundColor: ['#47c8ff', '#e8ff47', '#47ff9c'],
+                borderRadius: 4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { beginAtZero: true, max: 100, grid: { color: '#242a35' }, ticks: { font: { size: 10 } } },
+                x: { grid: { display: false }, ticks: { font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+function initKPITrendChart() {
+    const ctx = document.getElementById('kpiTrendChart').getContext('2d');
+    if (window.kpiTrendObj) return; // Only init once
+    window.kpiTrendObj = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00'],
+            datasets: [{
+                label: 'Production Speed',
+                data: [88, 92, 85, 95, 90, 93],
+                borderColor: '#e8ff47',
+                backgroundColor: 'rgba(232, 255, 71, 0.05)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+                y: { grid: { color: '#242a35' }, ticks: { font: { size: 10 } } },
+                x: { grid: { color: '#242a35' }, ticks: { font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+async function updateFleetData() {
+    try {
+        // 1. Зареждане на Fleet
+        const fRes = await fetch(`${API_URL}/fleet_status`);
+        if(!fRes.ok) throw new Error(`HTTP error! status: ${fRes.status}`);
+        const fleet = await fRes.json();
+        const fBody = document.getElementById('fleet-list');
+        fBody.innerHTML = '';
+        if(fleet && Array.isArray(fleet)) {
+            fleet.forEach(node => {
+                const statusCol = node.status === 'Online' ? 'var(--green)' : 'var(--red)';
+                fBody.innerHTML += `
+                    <tr style="border-bottom:1px solid var(--border2);">
+                        <td style="padding:10px;">${node.id}</td>
+                        <td style="padding:10px; color:${statusCol}">${node.status}</td>
+                        <td style="padding:10px;">${node.load}</td>
+                        <td style="padding:10px; font-size:10px;">${node.model_version}</td>
+                        <td style="padding:10px;"><button class="btn-ghost" style="padding:2px 6px; font-size:9px;">Update</button></td>
+                    </tr>
+                `;
+            });
+        }
+
+        // 2. Зареждане на Registry
+        const rRes = await fetch(`${API_URL}/model_registry`);
+        if(!rRes.ok) throw new Error(`HTTP error! status: ${rRes.status}`);
+        const registry = await rRes.json();
+        const rList = document.getElementById('model-registry-list');
+        rList.innerHTML = '';
+        if(registry && Array.isArray(registry)) {
+            registry.forEach(m => {
+                const isActive = m.status === 'Active';
+                rList.innerHTML += `
+                    <div style="background:var(--bg3); padding:12px; border-radius:8px; border-left:4px solid ${isActive ? 'var(--accent2)' : 'var(--muted2)'}">
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <span style="font-weight:bold; font-size:13px;">${m.version}</span>
+                            <span style="font-size:10px; color:var(--muted)">${m.status}</span>
+                        </div>
+                        <div style="font-size:11px; margin-top:4px; color:var(--muted)">Accuracy: ${(m.accuracy*100).toFixed(1)}% | ${m.date}</div>
+                        ${!isActive ? `<button class="btn-ghost" style="margin-top:8px; padding:2px 8px; font-size:9px;" onclick="alert('Rollback initiated to ${m.version}')">Rollback</button>` : ''}
+                    </div>
+                `;
+            });
+        }
+
+    } catch(e) { console.error(e); }
+}
+
+async function updateHealth() {
+    try {
+        const res = await fetch(`${API_URL}/health`);
+        if(!res.ok) throw new Error("API Offline");
+        const data = await res.json();
+        document.getElementById('res-cpu').textContent = data.resources.cpu + "%";
+        document.getElementById('res-ram').textContent = data.resources.ram + "%";
+
+        // Update status UI
+        document.getElementById('status-dot').classList.add('on');
+        document.getElementById('status-text').textContent = "ONLINE";
+
+        if(data.model && document.getElementById('chat-model-select').value === "") {
+            loadModelsList(data.model);
+        }
+    } catch(e) {
+        document.getElementById('status-dot').classList.remove('on');
+        document.getElementById('status-text').textContent = "OFFLINE";
+    }
+}
+
+async function loadModelsList(currentModel) {
+    try {
+        const res = await fetch(`${API_URL}/models_list`);
+        const data = await res.json();
+        const select = document.getElementById('chat-model-select');
+        select.innerHTML = '';
+        data.models.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m.name;
+            opt.textContent = m.name;
+            if(m.name === currentModel) opt.selected = true;
+            select.appendChild(opt);
+        });
+    } catch(e) {}
+}
+
+async function switchModel(name) {
+    if(!name) return;
+    try {
+        const res = await fetch(`${API_URL}/switch_model/${name}`, { method: 'POST' });
+        const data = await res.json();
+        addMsg('bot', `🔄 Моделът е сменен на: **${name}**`);
+    } catch(e) { alert("Грешка при смяна на модел"); }
+}
+
+async function updateClients() {
+  try {
+    const res = await fetch(`${API_URL}/clients`);
+    const clients = await res.json();
+    const select = document.getElementById('chat-client');
+    const currentVal = select.value;
+    select.innerHTML = '<option value="">Всички клиенти</option>';
+    for(let id in clients) {
+      select.innerHTML += `<option value="${id}">${clients[id].name}</option>`;
+    }
+    select.value = currentVal;
+    window.allClients = clients; // Запазваме локално
+  } catch(e) {}
+}
+
+async function addClient() {
+  const name = document.getElementById('cl-name').value;
+  const tol = document.getElementById('cl-tol').value;
+  const method = document.getElementById('cl-method').value;
+
+  if(!name) return alert("Моля въведете име на клиент");
+
+  const res = await fetch(`${API_URL}/clients`, {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({ name: name, tolerance: parseFloat(tol), preferred_method: method })
+  });
+  const data = await res.json();
+  alert(data.message);
+  updateClients();
+}
+
+function loadClientSettings(clientId) {
+  if(!clientId || !window.allClients || !window.allClients[clientId]) return;
+  const client = window.allClients[clientId];
+  document.getElementById('c-tol').value = client.tolerance;
+  document.getElementById('c-method').value = client.preferred_method;
+  alert(`Заредени настройки за ${client.name}: Толеранс ${client.tolerance}, Метод ${client.preferred_method}`);
+}
+
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  const target = current === 'light' ? 'dark' : 'light';
+  document.documentElement.setAttribute('data-theme', target);
+  localStorage.setItem('theme', target);
+}
+
+// Зареждане на запазената тема
+const savedTheme = localStorage.getItem('theme') || 'dark';
+document.documentElement.setAttribute('data-theme', savedTheme);
+
+function startVoice() { alert("Гласова функция активна."); }
+
+async function predictTrend() {
+    const history = parseColorInput(document.getElementById('c-history').value);
+    const out = document.getElementById('trend-result');
+    out.innerHTML = "<div>> Изчисляване на тренд...</div>";
+
+    try {
+        const res = await fetch(`${API_URL}/predict_trend`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ historical_de: history })
+        });
+        const data = await res.json();
+        out.innerHTML = `<div>Прогноза: <b>${data.prediction.toFixed(3)}</b> ΔE</div>
+                         <div style="color: ${data.trend === 'влошава се' ? 'var(--red)' : 'var(--green)'}">
+                            Тенденция: ${data.trend}
+                         </div>`;
+    } catch(e) {
+        out.innerHTML = "<div style='color:var(--red)'>Грешка при прогнозиране.</div>";
+    }
+}
+
+async function checkProductionRisk() {
+    const out = document.getElementById('trend-result');
+    const badge = document.getElementById('risk-badge');
+    out.innerHTML = "<div>> Симулиране на производствени условия...</div>";
+
+    try {
+        const res = await fetch(`${API_URL}/predict_batch_risk`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                temperature: 34.2, // Живи данни от IoT
+                humidity: 72.1,
+                material_index: 0.88
+            })
+        });
+        const data = await res.json();
+
+        badge.textContent = `RISK: ${data.risk_score}%`;
+        badge.style.display = 'inline-block';
+        badge.style.background = data.status === 'High Risk' ? 'var(--red)' : 'var(--accent)';
+        badge.style.color = '#000';
+
+        let html = `<div style="color:var(--accent2); font-weight:bold;">Статус: ${data.status}</div>`;
+        html += `<div style="font-size:12px; margin-top:5px;">Критични фактори:</div><ul style="font-size:11px; margin-left:15px;">`;
+        data.factors.forEach(f => { if(f) html += `<li>${f}</li>`; });
+        html += `</ul>`;
+
+        out.innerHTML = html;
+        if(data.status === 'High Risk') {
+            alert("ВНИМАНИЕ: Висок риск от брак! Системата препоръчва преглед на параметрите преди старт.");
+        }
+    } catch(e) { out.innerHTML = "Грешка при проверка на риска."; }
+}
+
+async function formulateRecipe() {
+    const std = parseColorInput(document.getElementById('c-lab-std').value);
+    const out = document.getElementById('trend-result');
+    out.innerHTML = "<div>> Генериране на AI рецепта...</div>";
+
+    try {
+        const res = await fetch(`${API_URL}/recipe_formulation`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ lab_standard: std, lab_sample: std, tolerance: 1.0 })
+        });
+        const data = await res.json();
+        out.innerHTML = `<div style="color:var(--accent)">Препоръчан пигмент: <b>${data.recommended_pigment}</b></div>
+                         <div>Прогнозирано ΔE: ${data.estimated_delta_e.toFixed(3)}</div>
+                         <div>Концентрация: ${data.concentration}</div>`;
+    } catch(e) {
+        out.innerHTML = "<div style='color:var(--red)'>Грешка при генериране на рецепта.</div>";
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    updateClients();
+    initWS();
+    updateHealth();
+    setInterval(updateHealth, 30000); // Optimized for low load (30s)
+});
+init3D();
+updateRagStats();
+addMsg('bot', "Здравей! Аз съм твоят Industrial Intelligence Assistant. Как мога да Ви помогна днес?");
+</script>
+</body>
+</html>

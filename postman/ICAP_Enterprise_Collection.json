@@ -1,0 +1,724 @@
+{
+  "info": {
+    "name": "ICAP Enterprise API Collection",
+    "description": "Postman collection for ICAP v8.9.5 Enterprise API testing",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "refresh_token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "tenant_id",
+      "value": "default",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Login",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"admin\",\n  \"password\": \"admin_password\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Authenticate user and receive access and refresh tokens"
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refresh_token\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            },
+            "description": "Refresh access token using refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            },
+            "description": "Get current authenticated user information"
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            },
+            "description": "Logout user by blacklisting their token"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Create User",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"username\": \"test_user\",\n  \"email\": \"test@company.com\",\n  \"password\": \"test_password\",\n  \"role\": \"OPERATOR\",\n  \"tenant_id\": \"{{tenant_id}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/users",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "users"]
+            },
+            "description": "Create a new user (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Users",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/users",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "users"]
+            },
+            "description": "List all users in the system (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Update User Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"new_role\": \"SUPERVISOR\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/users/test_user/role",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "users", "test_user", "role"]
+            },
+            "description": "Update user role (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/users/test_user",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "users", "test_user"]
+            },
+            "description": "Delete a user account (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/auth/roles",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "roles"]
+            },
+            "description": "List all available roles and their permissions"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Tenant Management",
+      "item": [
+        {
+          "name": "Create Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenant_id\": \"test_tenant\",\n  \"name\": \"Test Tenant\",\n  \"config\": {\n    \"max_users\": 50,\n    \"storage_quota_gb\": 100\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/tenants",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants"]
+            },
+            "description": "Create a new tenant (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "List All Tenants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/tenants",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants"]
+            },
+            "description": "List all tenants (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tenant Info",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/tenants/{{tenant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants", "{{tenant_id}}"]
+            },
+            "description": "Get tenant information (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Tenant Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/tenants/{{tenant_id}}/stats",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants", "{{tenant_id}}", "stats"]
+            },
+            "description": "Get tenant statistics (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Activate Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/tenants/test_tenant/activate",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants", "test_tenant", "activate"]
+            },
+            "description": "Activate a tenant (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Deactivate Tenant",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/tenants/test_tenant/deactivate",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants", "test_tenant", "deactivate"]
+            },
+            "description": "Deactivate a tenant (requires user_management permission)"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Tenant",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/tenants/test_tenant",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "tenants", "test_tenant"]
+            },
+            "description": "Delete a tenant (requires user_management permission)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Color Analysis",
+      "item": [
+        {
+          "name": "Analyze Color",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"lab_sample\": [50.0, 2.0, 5.0],\n  \"lab_standard\": [50.0, 2.0, 5.0],\n  \"tolerance\": 1.0,\n  \"batch_id\": \"batch_123\",\n  \"operator_id\": \"test_operator\",\n  \"machine_id\": \"machine_1\",\n  \"client_id\": \"client_a\",\n  \"method\": \"CIE2000\",\n  \"illuminant\": \"D65\",\n  \"batch_size\": 1000\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/color/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["color", "analyze"]
+            },
+            "description": "Analyze color sample against standard"
+          },
+          "response": []
+        },
+        {
+          "name": "Predict Trend",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"batch_id\": \"batch_123\",\n  \"days_ahead\": 7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/color/predict_trend",
+              "host": ["{{base_url}}"],
+              "path": ["color", "predict_trend"]
+            },
+            "description": "Predict color trend for a batch"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Vision Analysis",
+      "item": [
+        {
+          "name": "Analyze Vision",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "generate_map",
+                  "value": "true",
+                  "type": "text"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/vision/analyze",
+              "host": ["{{base_url}}"],
+              "path": ["vision", "analyze"]
+            },
+            "description": "Analyze surface image for defects"
+          },
+          "response": []
+        },
+        {
+          "name": "Multi-View Fusion",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                },
+                {
+                  "key": "files",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/vision/fusion",
+              "host": ["{{base_url}}"],
+              "path": ["vision", "fusion"]
+            },
+            "description": "Combine multiple views for defect detection"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "RAG System",
+      "item": [
+        {
+          "name": "Diagnose",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"prompt\": \"What causes color variations in batch processing?\",\n  \"use_rag\": true,\n  \"temperature\": 0.7\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/rag/diagnose",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "diagnose"]
+            },
+            "description": "Get AI-powered diagnosis using RAG"
+          },
+          "response": []
+        },
+        {
+          "name": "Index Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/rag/index_document",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "index_document"]
+            },
+            "description": "Index a document for RAG search"
+          },
+          "response": []
+        },
+        {
+          "name": "Get RAG Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              },
+              {
+                "key": "X-Tenant-ID",
+                "value": "{{tenant_id}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/rag/stats",
+              "host": ["{{base_url}}"],
+              "path": ["rag", "stats"]
+            },
+            "description": "Get RAG system statistics"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Audit Logging",
+      "item": [
+        {
+          "name": "Query Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/audit/logs?user_id=test_user&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "audit", "logs"],
+              "query": [
+                {
+                  "key": "user_id",
+                  "value": "test_user"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Query audit logs"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User Activity Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/audit/summary/test_user",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "audit", "summary", "test_user"]
+            },
+            "description": "Get user activity summary"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Audit Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/audit/stats",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "audit", "stats"]
+            },
+            "description": "Get audit statistics"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "System Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check system health status"
+          },
+          "response": []
+        },
+        {
+          "name": "Metrics",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/metrics",
+              "host": ["{{base_url}}"],
+              "path": ["metrics"]
+            },
+            "description": "Get Prometheus metrics"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

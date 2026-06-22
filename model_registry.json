@@ -1,0 +1,10 @@
+[
+    {"version": "v1.0.0", "name": "irm-base", "date": "2024-01-10", "accuracy": 0.85, "status": "Archived"},
+    {"version": "v1.2.0", "name": "irm-industrial-v1", "date": "2024-03-15", "accuracy": 0.91, "status": "Stable"},
+    {"version": "v2.0.0-rc1", "name": "irm-industrial-v2", "date": "2024-06-20", "accuracy": 0.94, "status": "Stable"},
+    {"version": "v8.4.3", "name": "icap-enterprise-v8", "date": "2024-11-20", "accuracy": 0.98, "status": "Stable"},
+    {"version": "v8.4.3", "name": "icap-enterprise-v8.4", "date": "2026-06-15", "accuracy": 0.99, "status": "Stable"},
+    {"version": "v8.5.0", "name": "icap-enterprise-v8.5", "date": "2026-06-17", "accuracy": 0.995, "status": "Stable"},
+    {"version": "v8.8.0", "name": "icap-enterprise-v8.8", "date": "2026-06-19", "accuracy": 0.997, "status": "Stable"},
+    {"version": "v8.9.1", "name": "icap-enterprise-v8.9", "date": "2026-06-20", "accuracy": 0.998, "status": "Active"}
+]
