@@ -1,4 +1,4 @@
-# ICAP Platform Dockerfile — v8.10.0 Enterprise
+# ICAP Platform Dockerfile — v8.11.0 Enterprise
 # Multi-stage build for optimized image size and security
 # Оптимизиран за индустриално приложение с GPU поддръжка
 
@@ -31,7 +31,7 @@ RUN pip3 install --no-cache-dir --user -r requirements.txt
 
 # Stage 2: Runtime
 FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
-LABEL org.opencontainers.image.version="8.10.0"
+LABEL org.opencontainers.image.version="8.11.0"
 
 # Дефиниране на променливи на средата
 ENV DEBIAN_FRONTEND=noninteractive
@@ -76,6 +76,7 @@ COPY synthetic_gen.py .
 COPY prepare_data.py .
 COPY evaluate_model.py .
 COPY finetune_unsloth.py .
+COPY app/ ./app/
 COPY routers/ ./routers/
 COPY services/ ./services/
 COPY utils/ ./utils/
