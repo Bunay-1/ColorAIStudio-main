@@ -45,7 +45,7 @@ from utils.version import ICAP_VERSION, ICAP_VERSION_DISPLAY
 
 # Routers
 try:
-    from routers import color, vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, export_import
+    from routers import color, vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, export_import, websocket, graphql
     COLOR_ROUTER_AVAILABLE = True
 except ImportError:
     from routers import vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, export_import
@@ -378,6 +378,13 @@ app.include_router(compliance.router)
 app.include_router(mfa.router)
 app.include_router(cache.router)
 app.include_router(export_import.router)
+app.include_router(websocket.router)
+
+# GraphQL endpoint
+from routers.graphql import schema
+from strawberry.fastapi import GraphQLRouter
+graphql_app = GraphQLRouter(schema)
+app.include_router(graphql_app, prefix="/graphql")
 
 # --- Legacy & Global Endpoints ---
 @app.get("/clients")
