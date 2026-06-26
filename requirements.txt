@@ -1,4 +1,4 @@
-# --- ICAP PRODUCTION REQUIREMENTS (v8.9.7 Enterprise) ---
+# --- ICAP PRODUCTION REQUIREMENTS (v8.10.0 Enterprise) ---
 
 # Backend & API
 fastapi
@@ -69,8 +69,22 @@ python-json-logger
 # Monitoring
 prometheus-fastapi-instrumentator
 
+# Testing
+pytest
+pytest-cov
+pytest-asyncio
+pytest-timeout
+
 # Enterprise Features
 pyotp
 qrcode
 websockets
 email-validator
+
+# Caching
+redis
+hiredis
+
+# Database Migrations
+alembic
+sqlalchemy

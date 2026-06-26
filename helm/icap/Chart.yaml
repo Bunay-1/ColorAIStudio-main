@@ -1,0 +1,25 @@
+apiVersion: v2
+name: icap
+description: Industrial Color AI Platform (ICAP) - Enterprise Quality Control System
+type: application
+version: 8.10.0
+appVersion: "8.10.0"
+keywords:
+  - industrial
+  - quality-control
+  - color-analysis
+  - ai
+  - computer-vision
+home: https://github.com/icap-enterprise/ColorAIStudio
+sources:
+  - https://github.com/icap-enterprise/ColorAIStudio
+maintainers:
+  - name: ICAP Engineering Team
+    email: engineering@icap-enterprise.com
+icon: https://img.shields.io/badge/Industrial_AI-v8.10.0-blue
+annotations:
+  artifacthub.io/changes: |
+    - Added Redis caching layer
+    - Enhanced security with CSRF and security headers
+    - PostgreSQL migration support
+    - API key rotation

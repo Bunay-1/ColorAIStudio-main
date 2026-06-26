@@ -3,7 +3,7 @@ version: '3.8'
 services:
   icap-api:
     build: .
-    image: icap-v8.9.7
+    image: icap-v8.10.0
     container_name: icap-api
     restart: unless-stopped
     ports:
@@ -11,7 +11,9 @@ services:
     env_file:
       - .env
     environment:
-      - ICAP_VERSION=8.9.7
+      - ICAP_VERSION=8.10.0
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:
@@ -20,6 +22,8 @@ services:
       # Removed ./qdrant_db volume to prevent file locks (communication via API)
     depends_on:
       qdrant:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/livez"]
@@ -53,6 +57,28 @@ services:
     networks:
       - icap-network
 
+  redis:
+    image: redis:7-alpine
+    container_name: icap-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 512M
+    networks:
+      - icap-network
+
   # Опционално: Ollama ако се ползва контейнерна версия
   # ollama:
   #   image: ollama/ollama:latest
@@ -67,3 +93,7 @@ services:
 networks:
   icap-network:
     driver: bridge
+
+volumes:
+  redis_data:
+    driver: local

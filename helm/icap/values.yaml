@@ -1,0 +1,144 @@
+# Default values for ICAP Platform Helm Chart
+# This is a YAML-formatted file.
+
+replicaCount: 3
+
+image:
+  repository: icap-enterprise/icap
+  pullPolicy: IfNotPresent
+  tag: "8.10.0"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext: {}
+  # fsGroup: 2000
+
+securityContext: {}
+  # capabilities:
+  #   drop:
+  #   - ALL
+  # readOnlyRootFilesystem: true
+  # runAsNonRoot: true
+  # runAsUser: 1000
+
+service:
+  type: ClusterIP
+  port: 8000
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+    # kubernetes.io/ingress.class: nginx
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: icap.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  #  - secretName: icap-tls
+  #    hosts:
+  #      - icap.example.com
+
+resources:
+  limits:
+    cpu: 4000m
+    memory: 8Gi
+  requests:
+    cpu: 2000m
+    memory: 4Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 3
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Environment variables
+env:
+  ICAP_ENVIRONMENT: production
+  ICAP_VERSION: "8.10.0"
+  ICAP_EDGE_MODE: "0"
+  ICAP_ENABLE_TRACING: "true"
+
+# Database configuration
+postgresql:
+  enabled: true
+  host: postgres
+  port: 5432
+  database: icap
+  username: icap_user
+  existingSecret: ""
+  # password: ""
+
+# Redis configuration
+redis:
+  enabled: true
+  host: redis
+  port: 6379
+  database: 0
+  existingSecret: ""
+  # password: ""
+
+# Qdrant configuration
+qdrant:
+  enabled: true
+  host: qdrant
+  port: 6333
+  grpcPort: 6334
+
+# Ollama configuration
+ollama:
+  enabled: true
+  host: ollama
+  port: 11434
+  model: irm-industrial
+
+# Monitoring
+monitoring:
+  enabled: true
+  serviceMonitor:
+    enabled: true
+    interval: 30s
+    scrapeTimeout: 10s
+
+# Logging
+logging:
+  level: INFO
+  format: json
+
+# Persistence
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+
+# Security
+security:
+  csrf:
+    enabled: true
+    cookieName: csrf_token
+    headerName: X-CSRF-Token
+  securityHeaders:
+    enabled: true
+    hstsMaxAge: 31536000
+    hstsIncludeSubdomains: true
+    hstsPreload: true

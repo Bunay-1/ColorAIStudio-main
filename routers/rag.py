@@ -14,6 +14,7 @@ from utils.auth import check_permission, get_current_user
 from utils.audit_logger import AuditAction, log_audit_event
 from utils.rate_limiter import check_user_rate_limit
 from utils.models import ReasoningRequest, DocumentIndexRequest
+from utils.redis_cache import cache
 
 router = APIRouter(prefix="/rag", tags=["RAG & Knowledge"])
 logger = logging.getLogger("IRM_RAG_Router")
@@ -32,6 +33,17 @@ async def diagnose(request: ReasoningRequest, req: Request, current_user: dict =
     icap = req.app.state.icap
     EDGE_MODE = req.app.state.EDGE_MODE
     manager = req.app.state.manager
+
+    # Generate cache key for RAG query (exclude image data from cache key)
+    cache_key = f"rag_query:{hash(request.query)}:{request.use_rag}:{bool(request.image_data)}"
+    
+    # Try to get from cache (only if no image data)
+    if not request.image_data:
+        cached_result = cache.get(cache_key)
+        if cached_result is not None:
+            logger.debug(f"Cache hit for RAG query: {cache_key}")
+            request_counter.labels(endpoint="/rag/diagnose", method="POST", status="success").inc()
+            return cached_result
 
     sources = []
     retrieved_context = ""
@@ -118,13 +130,20 @@ async def diagnose(request: ReasoningRequest, req: Request, current_user: dict =
         ip_address=req.client.host if req.client else None
     )
 
-    request_counter.labels(endpoint="/rag/diagnose", method="POST", status="success").inc()
-    return {
+    result = {
         "analysis": analysis_text,
         "sources": sources,
         "timestamp": time.time() - start_time,
         "model": MODEL_NAME
     }
+    
+    # Cache result for 5 minutes (only if no image data)
+    if not request.image_data:
+        cache.set(cache_key, result, ttl=300)
+        logger.debug(f"Cache set for RAG query: {cache_key}")
+    
+    request_counter.labels(endpoint="/rag/diagnose", method="POST", status="success").inc()
+    return result
 
 @router.post("/index_document", dependencies=[Depends(check_permission("configure"))])
 @limiter.limit("10/minute")  # 10 requests per minute per IP (indexing is resource-intensive)

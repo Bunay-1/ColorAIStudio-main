@@ -18,6 +18,7 @@ from utils.auth import check_permission, get_current_user
 from utils.audit_logger import AuditAction, log_audit_event
 from utils.rate_limiter import check_user_rate_limit
 from utils.metrics import request_counter, delta_e_duration_seconds
+from utils.redis_cache import cache
 
 router = APIRouter(prefix="/color", tags=["Color Analysis"])
 logger = logging.getLogger("IRM_Color_Router")
@@ -91,8 +92,20 @@ async def analyze_color(request: ColorAnalysisRequest, req: Request, current_use
     alert_system = req.app.state.alert_system
     log_to_audit_trail = req.app.state.log_to_audit_trail
 
-    with delta_e_duration_seconds.labels("/color/analyze").time():
-        de = icap.color_engine.calculate_delta_e(request.lab_sample, request.lab_standard, request.method)
+    # Generate cache key for Delta E calculation
+    cache_key = f"delta_e:{request.method}:{tuple(request.lab_sample)}:{tuple(request.lab_standard)}"
+    
+    # Try to get from cache
+    cached_de = cache.get(cache_key)
+    if cached_de is not None:
+        de = cached_de
+        logger.debug(f"Cache hit for Delta E calculation: {cache_key}")
+    else:
+        with delta_e_duration_seconds.labels("/color/analyze").time():
+            de = icap.color_engine.calculate_delta_e(request.lab_sample, request.lab_standard, request.method)
+        # Cache result for 10 minutes
+        cache.set(cache_key, de, ttl=600)
+        logger.debug(f"Cache set for Delta E calculation: {cache_key}")
     status = "Pass" if de <= request.tolerance else "Fail"
 
     if status == "Fail" and de > request.tolerance * 2:

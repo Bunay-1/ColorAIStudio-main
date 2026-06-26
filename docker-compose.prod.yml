@@ -11,10 +11,12 @@ services:
       - "8000:8000"
     environment:
       - ICAP_ENVIRONMENT=production
-      - ICAP_VERSION=8.9.7
+      - ICAP_VERSION=8.10.0
       - ICAP_DATABASE_URL=postgresql://icap_user:${POSTGRES_PASSWORD}@postgres:5432/icap
       - QDRANT_URL=http://qdrant:6333
       - OLLAMA_URL=http://ollama:11434
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
       - ICAP_RATE_LIMIT=100
       - ICAP_ALLOWED_ORIGINS=https://your-domain.com
       - ICAP_ENABLE_TRACING=true
@@ -32,6 +34,8 @@ services:
       postgres:
         condition: service_healthy
       qdrant:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/livez"]
@@ -88,7 +92,7 @@ services:
         max-file: "3"
 
   qdrant:
-    image: qdrant/qdrant:latest
+    image: qdrant/qdrant:v1.10.1
     container_name: icap-qdrant-prod
     restart: unless-stopped
     ports:
@@ -113,6 +117,37 @@ services:
         reservations:
           cpus: '1'
           memory: 2G
+    networks:
+      - icap-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  redis:
+    image: redis:7-alpine
+    container_name: icap-redis-prod
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+      - ./backups/redis:/backups
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy allkeys-lru
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 1G
     networks:
       - icap-network
     logging:
@@ -272,6 +307,59 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  loki:
+    image: grafana/loki:latest
+    container_name: icap-loki-prod
+    restart: unless-stopped
+    ports:
+      - "3100:3100"
+    volumes:
+      - ./monitoring/loki-config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    command: -config.file=/etc/loki/local-config.yaml
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    networks:
+      - icap-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: icap-promtail-prod
+    restart: unless-stopped
+    volumes:
+      - ./monitoring/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/log:/var/log:ro
+      - ./logs:/app/logs:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    networks:
+      - icap-network
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
 networks:
   icap-network:
     driver: bridge
@@ -286,7 +374,11 @@ volumes:
     driver: local
   ollama_data:
     driver: local
+  redis_data:
+    driver: local
   prometheus_data:
     driver: local
   grafana_data:
+    driver: local
+  loki_data:
     driver: local

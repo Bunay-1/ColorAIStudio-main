@@ -2,6 +2,42 @@
 
 Всички значими промени по проекта се записват в този файл. Форматът е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [8.10.0] — 2026-06-26
+
+### Добавено
+- **Performance:** Redis caching layer (utils/redis_cache.py) за Delta E изчисления и RAG резултати.
+- **Performance:** Интегриране на Redis кеширане в color router (/color/analyze) с 10 мин TTL.
+- **Performance:** Интегриране на Redis кеширане в RAG router (/rag/diagnose) с 5 мин TTL.
+- **Infrastructure:** Redis контейнер в docker-compose.yml и docker-compose.prod.yml.
+- **Testing:** Добавяне на pytest-cov, pytest-asyncio, pytest-timeout в requirements.txt.
+- **Testing:** Активиране на 80% test coverage праг в pytest.ini.
+- **CI/CD:** Добавяне на coverage reporting в GitHub Actions CI pipeline.
+- **Database:** Alembic migration система за PostgreSQL (alembic/).
+- **Database:** Първоначална миграция (001_initial_schema.py) за users, tenants, audit_logs, api_keys.
+- **Security:** API key rotation manager (utils/api_key_manager.py) за secure API key lifecycle.
+- **Security:** CSRF protection middleware (utils/csrf_middleware.py) за state-changing operations.
+- **Security:** Security headers middleware (utils/security_headers.py) с CSP, HSTS, X-Frame-Options.
+- **Documentation:** Пълен API reference documentation (Docs/API_REFERENCE.md).
+- **Documentation:** Architecture documentation с диаграми (Docs/ARCHITECTURE.md).
+- **Documentation:** Comprehensive troubleshooting guide (Docs/TROUBLESHOOTING.md).
+- **Deployment:** Helm Charts за Kubernetes deployment (helm/icap/).
+- **Monitoring:** Log aggregation с Loki и Promtail (monitoring/loki-config.yml, monitoring/promtail-config.yml).
+- **Monitoring:** Grafana dashboard за data visualization (monitoring/grafana-dashboard.json).
+- **API Versioning:** Пълна поддръжка на API v1 и v2 с backward compatibility (utils/api_versioning.py).
+- **Dependencies:** Добавяне на redis, hiredis, alembic, sqlalchemy в requirements.txt.
+
+### Променено
+- **Versioning:** Актуализация до v8.10.0 Enterprise.
+- **README:** Актуализация на версията и новите функции в v8.10.0.
+- **Docker Compose:** Добавяне на Redis service и health checks.
+- **Docker Compose Prod:** Пиннати версии на Qdrant (v1.10.1) и добавяне на Redis, Loki, Promtail.
+- **Dockerfile:** Актуализация на версията до 8.10.0.
+- **docker-compose.yml:** Актуализация на версията на образа до 8.10.0.
+- **utils/version.py:** Актуализация на версията до 8.10.0 Enterprise.
+
+### Коригирано
+- **Docker Compose Prod:** Премахнато използване на latest tag за Qdrant.
+
 ## [8.9.7] — 2026-06-22
 
 ### Добавено
