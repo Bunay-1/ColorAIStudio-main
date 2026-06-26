@@ -1,7 +1,7 @@
 """
 Industrial Color AI Platform (ICAP) — Main API Entry Point
 ==========================================================
-Version: 8.11.0 Enterprise
+Version: 8.11.1 Enterprise
 Automated Quality Control and Colorimetric Analysis Platform
 """
 
@@ -44,6 +44,7 @@ from app.core.state import ICAPState
 from app.core.ws_manager import ConnectionManager
 from app.core.indexer import background_indexer
 from app.core.models import ClientCreateRequest
+from app.core.audit import log_to_audit_trail
 from app.api import health
 
 # Routers
@@ -68,6 +69,9 @@ async def lifespan(app: FastAPI):
     # Startup
     app.state.ready = False
     logger.info(f"🚀 Стартиране на ICAP Engine (v{ICAP_VERSION_DISPLAY})...")
+
+    # Initialize Database
+    database.init_enterprise_db()
     
     config_results = validate_config()
     if not config_results["valid"]:
@@ -89,10 +93,11 @@ async def lifespan(app: FastAPI):
     app.state.icap = icap_state
     app.state.manager = ConnectionManager()
     app.state.alert_system = alert_system
-    
+    app.state.log_to_audit_trail = log_to_audit_trail
+
     # Background tasks
     indexer_task = asyncio.create_task(background_indexer(app.state.icap, app.state.manager))
-    
+
     app.state.ready = True
     logger.info("✅ ICAP API стартирането приключи успешно.")
 
@@ -139,7 +144,6 @@ setup_tracing(service_name="icap-api")
 instrument_fastapi(app)
 
 # --- Routes v1 ---
-# Използваме директно инклудване с префикс, за да споделят app state
 app.include_router(auth.router, prefix="/v1/auth", tags=["Auth"])
 if COLOR_ROUTER_AVAILABLE:
     app.include_router(color.router, prefix="/v1/color", tags=["Color"])
@@ -166,6 +170,13 @@ app.include_router(health.router) # Здравни проверки на осн�
 
 # --- Legacy Endpoints (Deprecated) ---
 DEPRECATED_HEADERS = {"Deprecation": "true", "Link": "</v1>; rel=\"successor-version\""}
+
+async def wrap_legacy_response(awaitable):
+    res = await awaitable
+    if isinstance(res, JSONResponse):
+        res.headers.update(DEPRECATED_HEADERS)
+        return res
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @app.get("/clients", tags=["Legacy"])
 async def get_clients():
@@ -201,15 +212,15 @@ async def get_model_registry():
 
 @app.post("/vision_analyze", tags=["Legacy"])
 async def legacy_vision_analyze(req: Request, file: UploadFile = File(...)):
-    return await vision.vision_analyze(req, file)
+    return await wrap_legacy_response(vision.vision_analyze(req, file))
 
 @app.post("/vision_micro_analyze", tags=["Legacy"])
 async def legacy_vision_micro_analyze(req: Request, file: UploadFile = File(...)):
-    return await vision.vision_micro_analyze(req, file)
+    return await wrap_legacy_response(vision.vision_micro_analyze(req, file))
 
 @app.get("/rag_stats", tags=["Legacy"])
 async def legacy_rag_stats(req: Request):
-    return await rag.get_rag_stats(req)
+    return await wrap_legacy_response(rag.get_rag_stats(req))
 
 @app.post("/index_document", tags=["Legacy"])
 async def legacy_index_document(request: DocumentIndexRequest, background_tasks: BackgroundTasks, req: Request):
@@ -220,27 +231,27 @@ async def legacy_index_document(request: DocumentIndexRequest, background_tasks:
         "message": f"Започна индексиране на {request.file_path}",
         "stats": stats
     })
-    return res
+    return await wrap_legacy_response(asyncio.sleep(0, result=res)) # Dummy awaitable for consistency
 
 @app.post("/analyze_color", tags=["Legacy"])
 async def legacy_analyze_color(request: ColorAnalysisRequest, req: Request):
-    return await color.analyze_color(request, req)
+    return await wrap_legacy_response(color.analyze_color(request, req))
 
 @app.post("/predict_trend", tags=["Legacy"])
 async def legacy_predict_trend(request: TrendRequest, req: Request):
-    return await color.predict_trend(request, req)
+    return await wrap_legacy_response(color.predict_trend(request, req))
 
 @app.post("/recipe_formulation", tags=["Legacy"])
 async def legacy_recipe_formulation(request: ColorAnalysisRequest, req: Request):
-    return await color.recipe_formulation(request, req)
+    return await wrap_legacy_response(color.recipe_formulation(request, req))
 
 @app.post("/train", tags=["Legacy"])
 async def legacy_train(request: TrainRequest, req: Request):
-    return await training.train_model(request, req)
+    return await wrap_legacy_response(training.train_model(request, req))
 
 @app.get("/train_status", tags=["Legacy"])
 async def legacy_train_status(req: Request):
-    return training.get_train_status(req)
+    return await wrap_legacy_response(asyncio.sleep(0, result=training.get_train_status(req)))
 
 @app.post("/clear_database", tags=["Legacy"])
 async def clear_database():
@@ -248,7 +259,7 @@ async def clear_database():
     state_file = "AuditTrail/indexer_state.json"
     if os.path.exists(state_file):
         os.remove(state_file)
-    return {"message": "Базата данни и индексерът са изчистени успешно."}
+    return JSONResponse(content={"message": "Базата данни и индексерът са изчистени успешно."}, headers=DEPRECATED_HEADERS)
 
 @app.get("/models_list", tags=["Legacy"])
 async def get_models_list():
@@ -260,28 +271,28 @@ async def get_models_list():
 
 @app.post("/switch_model/{name}", tags=["Legacy"])
 async def switch_model(name: str):
-    return {"status": "success", "message": f"Моделът е сменен на {name}"}
+    return JSONResponse(content={"status": "success", "message": f"Моделът е сменен на {name}"}, headers=DEPRECATED_HEADERS)
 
 @app.post("/predict_batch_risk", tags=["Legacy"])
 async def predict_batch_risk(process_params: dict):
-    return app.state.icap.ai_analysis.predict_quality_risk(process_params)
+    return JSONResponse(content=app.state.icap.ai_analysis.predict_quality_risk(process_params), headers=DEPRECATED_HEADERS)
 
 @app.post("/agent_task", tags=["Legacy"])
 async def legacy_agent_task(request: dict, req: Request):
-    return await agents.execute_agent_task(request, req)
+    return await wrap_legacy_response(agents.execute_agent_task(request, req))
 
 @app.get("/kg_export", tags=["Legacy"])
 async def kg_export():
     if os.path.exists("Docs/knowledge_graph.json"):
         with open("Docs/knowledge_graph.json", "r") as f:
-            return json.load(f)
-    return {"nodes": [], "links": []}
+            return JSONResponse(content=json.load(f), headers=DEPRECATED_HEADERS)
+    return JSONResponse(content={"nodes": [], "links": []}, headers=DEPRECATED_HEADERS)
 
 @app.get("/kg_reason/{issue}", tags=["Legacy"])
 async def kg_reason(issue: str):
     from knowledge_graph import IndustrialKG
     kg = IndustrialKG()
-    return {"reasoning": kg.find_reasoning_path(issue)}
+    return JSONResponse(content={"reasoning": kg.find_reasoning_path(issue)}, headers=DEPRECATED_HEADERS)
 
 @app.post("/hsi_analyze", tags=["Legacy"])
 async def hsi_analyze(data: dict):
@@ -301,17 +312,17 @@ async def hsi_analyze(data: dict):
 
 @app.get("/kpi_data", tags=["Legacy"])
 async def legacy_kpi_data():
-    return await iot.get_kpi_data()
+    return await wrap_legacy_response(iot.get_kpi_data())
 
 @app.get("/fleet_status", tags=["Legacy"])
 async def legacy_fleet_status():
-    return await iot.api_get_fleet_status()
+    return await wrap_legacy_response(iot.api_get_fleet_status())
 
 @app.post("/generate_iso_audit_report", tags=["Legacy"])
 async def generate_iso_audit_report():
     from services.report_service import generate_iso_audit_report
     filename = generate_iso_audit_report()
-    return {"filename": filename}
+    return JSONResponse(content={"filename": filename}, headers=DEPRECATED_HEADERS)
 
 @app.post("/generate_html_report", tags=["Legacy"])
 async def generate_html_report(request: ColorAnalysisRequest, req: Request):
@@ -322,11 +333,11 @@ async def generate_html_report(request: ColorAnalysisRequest, req: Request):
     status_color = "#47ff9c" if status == "Успех" else "#ff4766"
 
     filename = svc_gen(request.dict(), de, status, status_color, icap.color_engine)
-    return {"filename": filename}
+    return JSONResponse(content={"filename": filename}, headers=DEPRECATED_HEADERS)
 
 @app.post("/diagnose", tags=["Legacy"])
 async def legacy_diagnose(request: ReasoningRequest, req: Request):
-    return await rag.diagnose(request, req)
+    return await wrap_legacy_response(rag.diagnose(request, req))
 
 @app.get("/download_report/{filename}", tags=["Legacy"])
 async def download_report(filename: str):
@@ -338,7 +349,8 @@ async def download_report(filename: str):
         raise HTTPException(status_code=403, detail="Достъпът е забранен")
 
     if os.path.exists(file_path):
-        return FileResponse(file_path)
+        # FileResponse doesn't easily take extra headers in the same way, but let's try
+        return FileResponse(file_path, headers=DEPRECATED_HEADERS)
     raise HTTPException(status_code=404, detail="Отчетът не е намерен")
 
 @app.websocket("/ws")
