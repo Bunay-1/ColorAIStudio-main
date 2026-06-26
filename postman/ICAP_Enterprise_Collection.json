@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "ICAP Enterprise API Collection",
-    "description": "Postman collection for ICAP v8.9.7 Enterprise API testing",
+    "description": "Postman collection for ICAP v8.11.2 Enterprise API testing",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
