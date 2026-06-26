@@ -11,7 +11,7 @@ from utils.circuit_breaker import ollama_breaker, qdrant_breaker, CircuitBreaker
 
 router = APIRouter()
 
-@router.get("/livez")
+@router.get("/livez", tags=["Health"])
 async def liveness():
     from utils.metrics import circuit_breaker_state, circuit_breaker_failures, circuit_breaker_last_failure_time
 
@@ -32,14 +32,14 @@ async def liveness():
         "status": "alive",
         "version": ICAP_VERSION_DISPLAY,
         "timestamp": datetime.utcnow().isoformat(),
-        "startup_complete": True, # Should be dynamic if needed
+        "startup_complete": True,
         "circuit_breakers": {
             "ollama": ollama_breaker.get_state_name(),
             "qdrant": qdrant_breaker.get_state_name()
         }
     }
 
-@router.get("/health")
+@router.get("/health", tags=["Health"])
 async def health(request: Request):
     """
     Comprehensive health check endpoint.
@@ -67,13 +67,12 @@ async def health(request: Request):
     except Exception as e:
         health_status["resources"] = {"error": str(e)}
 
-    # Database health
+    # Database health - Fixed with context manager
     try:
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        conn.close()
-        health_status["services"]["database"] = "connected"
+        with database.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
+            health_status["services"]["database"] = "connected"
     except Exception as e:
         health_status["services"]["database"] = f"disconnected: {str(e)}"
         health_status["status"] = "degraded"
@@ -151,7 +150,7 @@ async def health(request: Request):
 
     return health_status
 
-@router.get("/readyz")
+@router.get("/readyz", tags=["Health"])
 async def readiness(request: Request):
     import httpx
     from utils.retry import retry_async
@@ -175,10 +174,9 @@ async def readiness(request: Request):
         )
 
     try:
-        conn = database.get_db_connection()
-        cursor = conn.cursor()
-        cursor.execute("SELECT 1")
-        conn.close()
+        with database.get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT 1")
         readiness_status["services"]["database"] = "connected"
     except Exception as e:
         readiness_status["services"]["database"] = f"disconnected: {str(e)}"
