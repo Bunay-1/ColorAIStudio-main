@@ -3,7 +3,7 @@ version: '3.8'
 services:
   icap-api:
     build: .
-    image: icap-v8.11.3
+    image: icap-v8.11.4
     container_name: icap-api
     restart: unless-stopped
     ports:
@@ -11,7 +11,7 @@ services:
     env_file:
       - .env
     environment:
-      - ICAP_VERSION=8.11.3
+      - ICAP_VERSION=8.11.4
       - REDIS_HOST=redis
       - REDIS_PORT=6379
     extra_hosts:

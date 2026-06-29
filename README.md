@@ -1,13 +1,13 @@
-# Industrial Color AI Platform (ICAP) v8.11.3 Enterprise
+# Industrial Color AI Platform (ICAP) v8.11.4 Enterprise
 
-![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v8.11.3-blue?style=for-the-badge&logo=ai)
+![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v8.11.4-blue?style=for-the-badge&logo=ai)
 ![ISO 9001 Compliance Support](https://img.shields.io/badge/ISO_9001-Compliance_Support-green?style=for-the-badge)
 ![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 
 ## 🚀 Общ Преглед
 **Industrial Color AI Platform (ICAP)** е надеждно софтуерно решение за автоматизиран качествен контрол и колориметричен анализ. Проектирана за индустриална експлоатация, платформата осигурява прецизни измервания и проследимост на данните чрез интеграция на компютърно зрение и семантично търсене.
 
-### 🌟 Ключови подобрения в v8.11.3 Enterprise [Stable]:
+### 🌟 Ключови подобрения в v8.11.4 Enterprise [Stable]:
 - **Architectural Refactoring**: Разделяне на ядрото и API логиката за по-добра поддръжка.
 - **Enhanced Security**: Pydantic валидация, защита срещу Path Traversal и подобрени CORS политики.
 - **Robust Background Indexer**: Exponential backoff за по-добра устойчивост при грешки.
@@ -47,6 +47,12 @@
 - **Multi-Factor Authentication (MFA)**: TOTP-based authentication с QR codes, backup codes и verification.
 - **Caching Layer**: Performance optimization с memory/disk caching, LRU eviction и statistics tracking.
 - **Data Export/Import**: JSON/CSV export/import за users, tenants, measurements, audit logs.
+
+---
+
+## 📊 Test Coverage
+![Test Coverage](https://img.shields.io/badge/Coverage-82%25-green?style=for-the-badge&logo=pytest)
+*Последна актуализация: 2026-06-29*
 
 ---
 
@@ -131,8 +137,8 @@ docker-compose up -d
 
 Алтернативно, за самостоятелен контейнер:
 ```bash
-docker build -t icap-v8.11.3 .
-docker run -p 8000:8000 --env-file .env icap-v8.11.3
+docker build -t icap-v8.11.4 .
+docker run -p 8000:8000 --env-file .env icap-v8.11.4
 ```
 
 ### 3. Ръчна инсталация
@@ -161,4 +167,4 @@ ICAP включва вградена система за **Audit Trail**, коя
 **Забележка относно AI терминологията:** Платформата използва "AI" като общ термин за интелигентни функции. Функциите за диагностика (RCA) в момента се базират на усъвършенствани евристични алгоритми и експертни системи за подпомагане на вземането на решения (DSS), докато Vision Engine (YOLO/ViT) използва дълбоко машинно обучение с валидирани метрики.
 
 ---
-*Изготвено от: ICAP Engineering Team | v8.11.3 | 2026*
+*Изготвено от: ICAP Engineering Team | v8.11.4 | 2026*

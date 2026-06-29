@@ -1,4 +1,4 @@
-# --- ICAP PRODUCTION REQUIREMENTS (v8.11.3 Enterprise) ---
+# --- ICAP PRODUCTION REQUIREMENTS (v8.11.4 Enterprise) ---
 
 # Backend & API
 fastapi==0.111.0
@@ -90,3 +90,7 @@ hiredis==3.0.0
 # Database Migrations
 alembic==1.13.1
 sqlalchemy==2.0.31
+
+# Security Scanning
+bandit==1.7.9
+semgrep==1.77.0
