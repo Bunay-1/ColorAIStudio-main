@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request, Depends
 from typing import List, Optional
+import os
 import time
 import numpy as np
 try:
@@ -253,3 +254,20 @@ async def recipe_formulation(request: ColorAnalysisRequest, req: Request, curren
     
     request_counter.labels(endpoint="/color/recipe_formulation", method="POST", status="success").inc()
     return result
+
+@router.post("/hsi-analyze", dependencies=[Depends(check_permission("analyze"))])
+async def hsi_analyze(data: dict, current_user: dict = Depends(get_current_user)):
+    """Хиперспектрален анализ на материали [DEMO]."""
+    if os.environ.get("ICAP_ENVIRONMENT") == "production":
+         raise HTTPException(status_code=403, detail="Този ендпойнт е деактивиран в production среда.")
+
+    return {
+        "wavelengths": list(range(400, 1001, 20)),
+        "intensities": [random.random() for _ in range(31)],
+        "material_identified": "Polymer Composite X1",
+        "confidence": 0.94,
+        "subsurface_defect": False,
+        "note": "Симулирани данни за демо"
+    }
+
+import random # Ensure random is available

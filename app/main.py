@@ -20,7 +20,7 @@ from app.core.lifecycle import lifespan
 from app.api import health, legacy
 
 # Routers
-from routers import vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, export_import, websocket, graphql, clients, models
+from routers import vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, export_import, websocket, graphql, clients, models, knowledge_graph, reports
 try:
     from routers import color
     COLOR_ROUTER_AVAILABLE = True
@@ -84,6 +84,8 @@ instrument_fastapi(app)
 app.include_router(auth.router, prefix="/v1/auth", tags=["Auth"])
 app.include_router(clients.router, prefix="/v1/clients", tags=["Clients"])
 app.include_router(models.router, prefix="/v1/models", tags=["Models"])
+app.include_router(knowledge_graph.router, prefix="/v1/knowledge-graph", tags=["Knowledge Graph"])
+app.include_router(reports.router, prefix="/v1", tags=["Reports"])
 if COLOR_ROUTER_AVAILABLE:
     app.include_router(color.router, prefix="/v1/color", tags=["Color"])
 app.include_router(vision.router, prefix="/v1/vision", tags=["Vision"])

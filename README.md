@@ -1,14 +1,16 @@
-# Industrial Color AI Platform (ICAP) v0.1.1 Enterprise
+# Industrial Color AI Platform (ICAP) v0.2.0 Enterprise
 
-![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v0.1.1-blue?style=for-the-badge&logo=ai)
+![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v0.2.0-blue?style=for-the-badge&logo=ai)
 ![ISO 9001 Compliance Support](https://img.shields.io/badge/ISO_9001-Compliance_Support-green?style=for-the-badge)
 ![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 
 ## 🚀 Общ Преглед
 **Industrial Color AI Platform (ICAP)** е надеждно софтуерно решение за автоматизиран качествен контрол и колориметричен анализ. Проектирана за индустриална експлоатация, платформата осигурява прецизни измервания и проследимост на данните чрез интеграция на компютърно зрение и семантично търсене.
 
-### 🌟 Ключови подобрения в v0.1.1 Enterprise [Stable]:
-- **API v1 Migration**: Миграция на критични legacy ендпойнти (clients, models) към официалния v1 API.
+### 🌟 Ключови подобрения в v0.2.0 Enterprise [Stable]:
+- **Full API v1 Migration**: Завършена миграция на всички legacy ендпойнти към официалната v1 структура. `legacy.py` вече работи изцяло като прокси слой.
+- **Enhanced GraphQL**: Оптимизиран GraphQL рутер с поддръжка на комплексни измервания и системни статуси.
+- **Improved Test Coverage**: Разширена тестова база за покриване на всички мигрирани v1 рутери.
 - **Deep Architectural Refactoring**: Преминаване към модулна архитектура (`app/main.py`, `app/core/lifecycle.py`) за по-лесна поддръжка и скалируемост.
 - **Background Indexer Optimization**: Добавена 30-секундна пауза при успешно индексиране за намаляване на дисковото натоварване.
 - **Security Hardening**: Пълно прилагане на автентикация към legacy ендпойнтите и маркиране на демо функции.
@@ -142,8 +144,8 @@ docker-compose up -d
 
 Алтернативно, за самостоятелен контейнер:
 ```bash
-docker build -t icap-v0.1.1 .
-docker run -p 8000:8000 --env-file .env icap-v0.1.1
+docker build -t icap-v0.2.0 .
+docker run -p 8000:8000 --env-file .env icap-v0.2.0
 ```
 
 ### 3. Ръчна инсталация
@@ -172,4 +174,4 @@ ICAP включва вградена система за **Audit Trail**, коя
 **Забележка относно AI терминологията:** Платформата използва "AI" като общ термин за интелигентни функции. Функциите за диагностика (RCA) в момента се базират на усъвършенствани евристични алгоритми и експертни системи за подпомагане на вземането на решения (DSS), докато Vision Engine (YOLO/ViT) използва дълбоко машинно обучение с валидирани метрики.
 
 ---
-*Изготвено от: ICAP Engineering Team | v0.1.1 | 2026*
+*Изготвено от: ICAP Engineering Team | v0.2.0 | 2026*
