@@ -41,29 +41,38 @@ async def get_clients(conn=Depends(get_db)):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM clients")
         rows = cursor.fetchall()
-        return JSONResponse(content={row["id"]: dict(row) for row in rows}, headers=DEPRECATED_HEADERS)
+        res = {row["id"]: dict(row) for row in rows}
     except Exception as e:
         logger.error(f"Грешка в базата данни: {e}")
         raise HTTPException(status_code=500, detail="Грешка в базата данни")
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/clients", dependencies=[Depends(get_current_active_user)])
 async def add_client(data: ClientCreateRequest, conn=Depends(get_db)):
     try:
         cursor = conn.cursor()
+        client_id = data.name.upper().replace(" ", "_")
         cursor.execute("INSERT OR REPLACE INTO clients (id, name, tolerance, preferred_method) VALUES (?, ?, ?, ?)",
-                       (data.name.upper().replace(" ", "_"), data.name, data.tolerance, data.preferred_method))
+                       (client_id, data.name, data.tolerance, data.preferred_method))
         conn.commit()
-        return JSONResponse(content={"message": "Клиентът е добавен/обновен успешно"}, headers=DEPRECATED_HEADERS)
+        res = {"message": "Клиентът е добавен/обновен успешно", "id": client_id}
     except Exception as e:
         logger.error(f"Грешка в базата данни: {e}")
         raise HTTPException(status_code=500, detail="Грешка в базата данни")
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.get("/model_registry", dependencies=[Depends(get_current_active_user)])
 async def get_model_registry():
-    if os.path.exists("model_registry.json"):
-        with open("model_registry.json", "r") as f:
-            return JSONResponse(content=json.load(f), headers=DEPRECATED_HEADERS)
-    return JSONResponse(content=[], headers=DEPRECATED_HEADERS)
+    registry_path = "model_registry.json"
+    res = []
+    if os.path.exists(registry_path):
+        try:
+            with open(registry_path, "r", encoding="utf-8") as f:
+                res = json.load(f)
+        except Exception as e:
+            logger.error(f"Грешка при четене на моделния регистър: {e}")
+            raise HTTPException(status_code=500, detail="Вътрешна грешка при четене на данни")
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/vision_analyze", dependencies=[Depends(get_current_active_user)])
 async def legacy_vision_analyze(req: Request, file: UploadFile = File(...)):
@@ -125,11 +134,14 @@ async def clear_database(req: Request):
 
 @router.get("/models_list", dependencies=[Depends(get_current_active_user)])
 async def get_models_list():
-    # [DEMO]
-    return JSONResponse(
-        content={"models": [{"name": "irm-industrial-v8.9"}, {"name": "irm-base-v1"}], "note": "Симулирани данни за демо"},
-        headers=DEPRECATED_HEADERS
-    )
+    res = {
+        "models": [
+            {"id": "irm-industrial-v8.9", "name": "IRM Industrial v8.9", "type": "Vision"},
+            {"id": "irm-base-v1", "name": "IRM Base v1", "type": "Color"}
+        ],
+        "note": "Симулирани данни за демо цели"
+    }
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/switch_model/{name}", dependencies=[Depends(get_current_active_user)])
 async def switch_model(name: str):
