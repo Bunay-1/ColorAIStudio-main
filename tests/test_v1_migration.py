@@ -44,3 +44,26 @@ def test_get_models_list_v1(auth_headers):
         data = response.json()
         assert "models" in data
         assert "note" in data
+
+def test_clear_database_v1(auth_headers):
+    with TestClient(app) as client:
+        response = client.post("/v1/rag/clear-database", headers=auth_headers)
+        assert response.status_code == 200
+        assert "Базата данни" in response.json()["message"]
+
+def test_predict_batch_risk_v1(auth_headers):
+    payload = {"temp": 80, "pressure": 1.2}
+    with TestClient(app) as client:
+        response = client.post("/v1/analytics/predict-batch-risk", json=payload, headers=auth_headers)
+        assert response.status_code == 200
+
+def test_kg_export_v1(auth_headers):
+    with TestClient(app) as client:
+        response = client.get("/v1/knowledge-graph/export", headers=auth_headers)
+        assert response.status_code == 200
+
+def test_generate_iso_report_v1(auth_headers):
+    with TestClient(app) as client:
+        response = client.post("/v1/reports/generate-iso", headers=auth_headers)
+        assert response.status_code == 200
+        assert "filename" in response.json()

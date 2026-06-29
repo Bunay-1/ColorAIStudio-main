@@ -2,6 +2,17 @@
 
 Всички значими промени по проекта се записват в този файл. Форматът е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.2.0] — 2026-06-30
+
+### Добавено
+- **API v1 Migration:** Завършена миграция на всички legacy ендпойнти към официалната v1 структура (`routers/knowledge_graph.py`, `routers/reports.py`, и др.).
+- **Legacy Layer:** `app/api/legacy.py` вече е чист прокси слой за по-добра поддръжка.
+- **GraphQL:** Подобрена GraphQL интеграция и поправка на потенциални runtime грешки при четене на Lab данни.
+- **Testing:** Разширено тестово покритие в `tests/test_v1_migration.py`.
+
+### Променено
+- **Versioning:** Актуализация до версия 0.2.0 (Major Migration Update).
+
 ## [0.1.1] — 2026-06-30
 
 ### Добавено

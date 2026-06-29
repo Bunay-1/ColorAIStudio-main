@@ -432,3 +432,14 @@ async def get_dashboard_data(
     except Exception as e:
         logger.error(f"Error getting dashboard data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/predict-batch-risk", dependencies=[Depends(get_current_user)])
+async def predict_batch_risk(process_params: dict, req: Request):
+    """Предсказва риска за качеството на партидата на база параметри на процеса."""
+    icap = req.app.state.icap
+    try:
+        risk_data = icap.ai_analysis.predict_quality_risk(process_params)
+        return risk_data
+    except Exception as e:
+        logger.error(f"Грешка при предсказване на риск: {e}")
+        raise HTTPException(status_code=500, detail="Вътрешна грешка при анализ на риска")

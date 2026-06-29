@@ -42,3 +42,10 @@ async def get_models_list(current_user: dict = Depends(get_current_active_user))
         ],
         "note": "Симулирани данни за демо цели"
     }
+
+@router.post("/switch/{name}", dependencies=[Depends(get_current_active_user)])
+async def switch_model(name: str):
+    """Превключване към различен AI модел [DEMO]."""
+    if os.environ.get("ICAP_ENVIRONMENT") == "production":
+         raise HTTPException(status_code=403, detail="Този ендпойнт е деактивиран в production среда.")
+    return {"status": "success", "message": f"Моделът е сменен на {name}"}

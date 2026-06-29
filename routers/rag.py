@@ -217,3 +217,23 @@ async def get_rag_stats(req: Request, current_user: dict = Depends(get_current_u
     icap = req.app.state.icap
     request_counter.labels(endpoint="/rag/stats", method="GET", status="success").inc()
     return await icap.rag.get_stats()
+
+@router.post("/clear-database", dependencies=[Depends(check_permission("configure"))])
+async def clear_database(req: Request, current_user: dict = Depends(get_current_user)):
+    """Изчиства векторната база данни и състоянието на индексерa."""
+    icap = req.app.state.icap
+    await icap.rag.reset_collection()
+    state_file = "AuditTrail/indexer_state.json"
+    if os.path.exists(state_file):
+        os.remove(state_file)
+
+    log_audit_event(
+        action=AuditAction.DATA_MODIFY,
+        user_id=current_user.get("username", "anonymous"),
+        user_role=current_user.get("role", "ADMIN"),
+        tenant_id=current_user.get("tenant_id", "default"),
+        details={"action": "clear_database"},
+        ip_address=req.client.host if req.client else None
+    )
+
+    return {"message": "Базата данни и индексерът са изчистени успешно."}

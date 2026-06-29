@@ -5,6 +5,7 @@ GraphQL endpoint for complex queries and data fetching.
 """
 
 import strawberry
+import json
 from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import Depends, Request

@@ -10,7 +10,7 @@ from pydantic import ValidationError
 
 import database
 from app.core.models import ClientCreateRequest
-from routers import vision, rag, color, training, agents, iot
+from routers import vision, rag, color, training, agents, iot, models
 from utils.auth import get_current_active_user
 
 logger = logging.getLogger("ICAP_API")
@@ -126,11 +126,8 @@ async def legacy_train_status(req: Request):
 
 @router.post("/clear_database", dependencies=[Depends(get_current_active_user)])
 async def clear_database(req: Request):
-    await req.app.state.icap.rag.reset_collection()
-    state_file = "AuditTrail/indexer_state.json"
-    if os.path.exists(state_file):
-        os.remove(state_file)
-    return JSONResponse(content={"message": "Базата данни и индексерът са изчистени успешно."}, headers=DEPRECATED_HEADERS)
+    res = await rag.clear_database(req)
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.get("/models_list", dependencies=[Depends(get_current_active_user)])
 async def get_models_list():
@@ -145,48 +142,42 @@ async def get_models_list():
 
 @router.post("/switch_model/{name}", dependencies=[Depends(get_current_active_user)])
 async def switch_model(name: str):
-    # [DEMO]
-    if os.environ.get("ICAP_ENVIRONMENT") == "production":
-         return JSONResponse(status_code=403, content={"message": "Този ендпойнт е деактивиран в production среда."})
-    return JSONResponse(content={"status": "success", "message": f"Моделът е сменен на {name}"}, headers=DEPRECATED_HEADERS)
+    try:
+        res = await models.switch_model(name)
+        return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail}, headers=DEPRECATED_HEADERS)
+
+from routers import analytics
 
 @router.post("/predict_batch_risk", dependencies=[Depends(get_current_active_user)])
 async def predict_batch_risk(process_params: dict, req: Request):
-    return JSONResponse(content=req.app.state.icap.ai_analysis.predict_quality_risk(process_params), headers=DEPRECATED_HEADERS)
+    res = await analytics.predict_batch_risk(process_params, req)
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/agent_task", dependencies=[Depends(get_current_active_user)])
 async def legacy_agent_task(request: dict, req: Request):
     return await wrap_legacy_response(agents.execute_agent_task(request, req))
 
+from routers import knowledge_graph
+
 @router.get("/kg_export", dependencies=[Depends(get_current_active_user)])
 async def kg_export():
-    if os.path.exists("Docs/knowledge_graph.json"):
-        with open("Docs/knowledge_graph.json", "r") as f:
-            return JSONResponse(content=json.load(f), headers=DEPRECATED_HEADERS)
-    return JSONResponse(content={"nodes": [], "links": []}, headers=DEPRECATED_HEADERS)
+    res = await knowledge_graph.kg_export()
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.get("/kg_reason/{issue}", dependencies=[Depends(get_current_active_user)])
 async def kg_reason(issue: str):
-    from knowledge_graph import IndustrialKG
-    kg = IndustrialKG()
-    return JSONResponse(content={"reasoning": kg.find_reasoning_path(issue)}, headers=DEPRECATED_HEADERS)
+    res = await knowledge_graph.kg_reason(issue)
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/hsi_analyze", dependencies=[Depends(get_current_active_user)])
 async def hsi_analyze(data: dict):
-    # [DEMO]
-    if os.environ.get("ICAP_ENVIRONMENT") == "production":
-         return JSONResponse(status_code=403, content={"message": "Този ендпойнт е деактивиран в production среда."})
-    return JSONResponse(
-        content={
-            "wavelengths": list(range(400, 1001, 20)),
-            "intensities": [random.random() for _ in range(31)],
-            "material_identified": "Polymer Composite X1",
-            "confidence": 0.94,
-            "subsurface_defect": False,
-            "note": "Симулирани данни за демо"
-        },
-        headers=DEPRECATED_HEADERS
-    )
+    try:
+        res = await color.hsi_analyze(data)
+        return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
+    except HTTPException as e:
+        return JSONResponse(status_code=e.status_code, content={"message": e.detail}, headers=DEPRECATED_HEADERS)
 
 @router.get("/kpi_data", dependencies=[Depends(get_current_active_user)])
 async def legacy_kpi_data():
@@ -196,23 +187,17 @@ async def legacy_kpi_data():
 async def legacy_fleet_status():
     return await wrap_legacy_response(iot.api_get_fleet_status())
 
+from routers import reports
+
 @router.post("/generate_iso_audit_report", dependencies=[Depends(get_current_active_user)])
 async def generate_iso_audit_report():
-    from services.report_service import generate_iso_audit_report
-    filename = generate_iso_audit_report()
-    return JSONResponse(content={"filename": filename}, headers=DEPRECATED_HEADERS)
+    res = await reports.generate_iso_audit_report()
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/generate_html_report", dependencies=[Depends(get_current_active_user)])
 async def generate_html_report(request: Any, req: Request):
-    from utils.models import ColorAnalysisRequest
-    from services.report_service import generate_html_report as svc_gen
-    icap = req.app.state.icap
-    de = icap.color_engine.calculate_delta_e(request.lab_sample, request.lab_standard, request.method)
-    status = "Успех" if de <= request.tolerance else "Неуспех"
-    status_color = "#47ff9c" if status == "Успех" else "#ff4766"
-
-    filename = svc_gen(request.dict(), de, status, status_color, icap.color_engine)
-    return JSONResponse(content={"filename": filename}, headers=DEPRECATED_HEADERS)
+    res = await reports.generate_html_report(request, req)
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
 
 @router.post("/diagnose", dependencies=[Depends(get_current_active_user)])
 async def legacy_diagnose(request: Any, req: Request):
@@ -221,12 +206,10 @@ async def legacy_diagnose(request: Any, req: Request):
 
 @router.get("/download_report/{filename}", dependencies=[Depends(get_current_active_user)])
 async def download_report(filename: str):
-    base_dir = os.path.realpath("AuditTrail")
-    file_path = os.path.realpath(os.path.join(base_dir, filename))
-
-    if not file_path.startswith(base_dir):
-        raise HTTPException(status_code=403, detail="Достъпът е забранен")
-
-    if os.path.exists(file_path):
-        return FileResponse(file_path, headers=DEPRECATED_HEADERS)
-    raise HTTPException(status_code=404, detail="Отчетът не е намерен")
+    res = await reports.download_report(filename)
+    # FileResponse requires special handling if wrapped, but here we can just return it or re-wrap headers
+    if isinstance(res, FileResponse):
+        for k, v in DEPRECATED_HEADERS.items():
+            res.headers[k] = v
+        return res
+    return JSONResponse(content=res, headers=DEPRECATED_HEADERS)
