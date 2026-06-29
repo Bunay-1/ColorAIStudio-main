@@ -11,6 +11,7 @@ from pydantic import ValidationError
 import database
 from app.core.models import ClientCreateRequest
 from routers import vision, rag, color, training, agents, iot
+from utils.auth import get_current_active_user
 
 logger = logging.getLogger("ICAP_API")
 
@@ -34,7 +35,7 @@ def get_db():
         logger.error(f"Грешка при свързване с базата данни: {e}")
         raise HTTPException(status_code=500, detail="Грешка в базата данни")
 
-@router.get("/clients")
+@router.get("/clients", dependencies=[Depends(get_current_active_user)])
 async def get_clients(conn=Depends(get_db)):
     try:
         cursor = conn.cursor()
@@ -45,7 +46,7 @@ async def get_clients(conn=Depends(get_db)):
         logger.error(f"Грешка в базата данни: {e}")
         raise HTTPException(status_code=500, detail="Грешка в базата данни")
 
-@router.post("/clients")
+@router.post("/clients", dependencies=[Depends(get_current_active_user)])
 async def add_client(data: ClientCreateRequest, conn=Depends(get_db)):
     try:
         cursor = conn.cursor()
@@ -64,11 +65,11 @@ async def get_model_registry():
             return JSONResponse(content=json.load(f), headers=DEPRECATED_HEADERS)
     return JSONResponse(content=[], headers=DEPRECATED_HEADERS)
 
-@router.post("/vision_analyze")
+@router.post("/vision_analyze", dependencies=[Depends(get_current_active_user)])
 async def legacy_vision_analyze(req: Request, file: UploadFile = File(...)):
     return await wrap_legacy_response(vision.vision_analyze(req, file))
 
-@router.post("/vision_micro_analyze")
+@router.post("/vision_micro_analyze", dependencies=[Depends(get_current_active_user)])
 async def legacy_vision_micro_analyze(req: Request, file: UploadFile = File(...)):
     return await wrap_legacy_response(vision.vision_micro_analyze(req, file))
 
@@ -76,7 +77,7 @@ async def legacy_vision_micro_analyze(req: Request, file: UploadFile = File(...)
 async def legacy_rag_stats(req: Request):
     return await wrap_legacy_response(rag.get_rag_stats(req))
 
-@router.post("/index_document")
+@router.post("/index_document", dependencies=[Depends(get_current_active_user)])
 async def legacy_index_document(request: Any, background_tasks: BackgroundTasks, req: Request):
     # We use Any for request because DocumentIndexRequest might be harder to import here or might cause circular imports
     # if not handled carefully. But let's try to use the models if possible.
@@ -90,22 +91,22 @@ async def legacy_index_document(request: Any, background_tasks: BackgroundTasks,
     })
     return await wrap_legacy_response(asyncio.sleep(0, result=res))
 
-@router.post("/analyze_color")
+@router.post("/analyze_color", dependencies=[Depends(get_current_active_user)])
 async def legacy_analyze_color(request: Any, req: Request):
     from utils.models import ColorAnalysisRequest
     return await wrap_legacy_response(color.analyze_color(request, req))
 
-@router.post("/predict_trend")
+@router.post("/predict_trend", dependencies=[Depends(get_current_active_user)])
 async def legacy_predict_trend(request: Any, req: Request):
     from utils.models import TrendRequest
     return await wrap_legacy_response(color.predict_trend(request, req))
 
-@router.post("/recipe_formulation")
+@router.post("/recipe_formulation", dependencies=[Depends(get_current_active_user)])
 async def legacy_recipe_formulation(request: Any, req: Request):
     from utils.models import ColorAnalysisRequest
     return await wrap_legacy_response(color.recipe_formulation(request, req))
 
-@router.post("/train")
+@router.post("/train", dependencies=[Depends(get_current_active_user)])
 async def legacy_train(request: Any, req: Request):
     from utils.models import TrainRequest
     return await wrap_legacy_response(training.train_model(request, req))
@@ -114,7 +115,7 @@ async def legacy_train(request: Any, req: Request):
 async def legacy_train_status(req: Request):
     return await wrap_legacy_response(asyncio.sleep(0, result=training.get_train_status(req)))
 
-@router.post("/clear_database")
+@router.post("/clear_database", dependencies=[Depends(get_current_active_user)])
 async def clear_database(req: Request):
     await req.app.state.icap.rag.reset_collection()
     state_file = "AuditTrail/indexer_state.json"
@@ -137,11 +138,11 @@ async def switch_model(name: str):
          return JSONResponse(status_code=403, content={"message": "Този ендпойнт е деактивиран в production среда."})
     return JSONResponse(content={"status": "success", "message": f"Моделът е сменен на {name}"}, headers=DEPRECATED_HEADERS)
 
-@router.post("/predict_batch_risk")
+@router.post("/predict_batch_risk", dependencies=[Depends(get_current_active_user)])
 async def predict_batch_risk(process_params: dict, req: Request):
     return JSONResponse(content=req.app.state.icap.ai_analysis.predict_quality_risk(process_params), headers=DEPRECATED_HEADERS)
 
-@router.post("/agent_task")
+@router.post("/agent_task", dependencies=[Depends(get_current_active_user)])
 async def legacy_agent_task(request: dict, req: Request):
     return await wrap_legacy_response(agents.execute_agent_task(request, req))
 
@@ -183,13 +184,13 @@ async def legacy_kpi_data():
 async def legacy_fleet_status():
     return await wrap_legacy_response(iot.api_get_fleet_status())
 
-@router.post("/generate_iso_audit_report")
+@router.post("/generate_iso_audit_report", dependencies=[Depends(get_current_active_user)])
 async def generate_iso_audit_report():
     from services.report_service import generate_iso_audit_report
     filename = generate_iso_audit_report()
     return JSONResponse(content={"filename": filename}, headers=DEPRECATED_HEADERS)
 
-@router.post("/generate_html_report")
+@router.post("/generate_html_report", dependencies=[Depends(get_current_active_user)])
 async def generate_html_report(request: Any, req: Request):
     from utils.models import ColorAnalysisRequest
     from services.report_service import generate_html_report as svc_gen
@@ -201,12 +202,12 @@ async def generate_html_report(request: Any, req: Request):
     filename = svc_gen(request.dict(), de, status, status_color, icap.color_engine)
     return JSONResponse(content={"filename": filename}, headers=DEPRECATED_HEADERS)
 
-@router.post("/diagnose")
+@router.post("/diagnose", dependencies=[Depends(get_current_active_user)])
 async def legacy_diagnose(request: Any, req: Request):
     from utils.models import ReasoningRequest
     return await wrap_legacy_response(rag.diagnose(request, req))
 
-@router.get("/download_report/{filename}")
+@router.get("/download_report/{filename}", dependencies=[Depends(get_current_active_user)])
 async def download_report(filename: str):
     base_dir = os.path.realpath("AuditTrail")
     file_path = os.path.realpath(os.path.join(base_dir, filename))

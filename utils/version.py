@@ -1,4 +1,4 @@
 """ICAP application version metadata."""
 
-ICAP_VERSION = "8.11.5"
-ICAP_VERSION_DISPLAY = "8.11.5 Enterprise"
+ICAP_VERSION = "0.1.0"
+ICAP_VERSION_DISPLAY = "0.1.0 Enterprise"
