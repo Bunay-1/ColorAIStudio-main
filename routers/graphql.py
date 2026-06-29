@@ -7,9 +7,11 @@ GraphQL endpoint for complex queries and data fetching.
 import strawberry
 from typing import List, Optional, Dict, Any
 from datetime import datetime
-from fastapi import Depends
+from fastapi import Depends, Request
 import logging
 import database
+from utils.version import ICAP_VERSION_DISPLAY
+from color_engine import ColorEngine
 
 logger = logging.getLogger("GraphQLRouter")
 
@@ -76,130 +78,126 @@ class Query:
         status: Optional[str] = None
     ) -> List[MeasurementType]:
         """
-        Query measurements with optional filters.
+        Заявка за измервания с незадължителни филтри.
         """
         try:
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            
-            query = "SELECT * FROM measurements WHERE 1=1"
-            params = []
-            
-            if batch_id:
-                query += " AND batch_id = ?"
-                params.append(batch_id)
-            
-            if status:
-                query += " AND status = ?"
-                params.append(status)
-            
-            query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            conn.close()
-            
-            return [
-                MeasurementType(
-                    id=row["id"],
-                    batch_id=row["batch_id"],
-                    operator_id=row["operator_id"],
-                    machine_id=row["machine_id"],
-                    client_id=row["client_id"],
-                    delta_e=row["delta_e"],
-                    status=row["status"],
-                    timestamp=row["timestamp"],
-                    lab_sample=row["lab_sample"],
-                    lab_standard=row["lab_standard"]
-                )
-                for row in rows
-            ]
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+
+                query = "SELECT * FROM measurements WHERE 1=1"
+                params = []
+
+                if batch_id:
+                    query += " AND batch_id = ?"
+                    params.append(batch_id)
+
+                if status:
+                    query += " AND status = ?"
+                    params.append(status)
+
+                query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+                params.extend([limit, offset])
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+
+                return [
+                    MeasurementType(
+                        id=row["id"],
+                        batch_id=row["batch_id"],
+                        operator_id=row["operator_id"],
+                        machine_id=row["machine_id"],
+                        client_id=row["client_id"],
+                        delta_e=row["delta_e"],
+                        status=row["status"],
+                        timestamp=datetime.fromisoformat(row["timestamp"]) if isinstance(row["timestamp"], str) else row["timestamp"],
+                        lab_sample=json.loads(row["lab_sample"]) if isinstance(row["lab_sample"], str) else [],
+                        lab_standard=json.loads(row["lab_standard"]) if isinstance(row["lab_standard"], str) else []
+                    )
+                    for row in rows
+                ]
         except Exception as e:
-            logger.error(f"Error fetching measurements: {e}")
+            logger.error(f"Грешка при извличане на измервания: {e}")
             return []
     
     @strawberry.field
     def measurement(self, id: int) -> Optional[MeasurementType]:
         """
-        Query a single measurement by ID.
+        Заявка за единично измерване по ID.
         """
         try:
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM measurements WHERE id = ?", (id,))
-            row = cursor.fetchone()
-            conn.close()
-            
-            if row:
-                return MeasurementType(
-                    id=row["id"],
-                    batch_id=row["batch_id"],
-                    operator_id=row["operator_id"],
-                    machine_id=row["machine_id"],
-                    client_id=row["client_id"],
-                    delta_e=row["delta_e"],
-                    status=row["status"],
-                    timestamp=row["timestamp"],
-                    lab_sample=row["lab_sample"],
-                    lab_standard=row["lab_standard"]
-                )
-            return None
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM measurements WHERE id = ?", (id,))
+                row = cursor.fetchone()
+
+                if row:
+                    return MeasurementType(
+                        id=row["id"],
+                        batch_id=row["batch_id"],
+                        operator_id=row["operator_id"],
+                        machine_id=row["machine_id"],
+                        client_id=row["client_id"],
+                        delta_e=row["delta_e"],
+                        status=row["status"],
+                        timestamp=datetime.fromisoformat(row["timestamp"]) if isinstance(row["timestamp"], str) else row["timestamp"],
+                        lab_sample=json.loads(row["lab_sample"]) if isinstance(row["lab_sample"], str) else [],
+                        lab_standard=json.loads(row["lab_standard"]) if isinstance(row["lab_standard"], str) else []
+                    )
+                return None
         except Exception as e:
-            logger.error(f"Error fetching measurement: {e}")
+            logger.error(f"Грешка при извличане на измерване: {e}")
             return None
     
     @strawberry.field
     def users(self, limit: int = 50) -> List[UserType]:
         """
-        Query all users.
+        Заявка за всички потребители.
         """
         try:
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users LIMIT ?", (limit,))
-            rows = cursor.fetchall()
-            conn.close()
-            
-            return [
-                UserType(
-                    id=row["id"],
-                    username=row["username"],
-                    email=row["email"],
-                    role=row["role"],
-                    is_active=row["is_active"],
-                    created_at=row["created_at"]
-                )
-                for row in rows
-            ]
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM users LIMIT ?", (limit,))
+                rows = cursor.fetchall()
+
+                return [
+                    UserType(
+                        id=row["id"],
+                        username=row["username"],
+                        email=row["email"],
+                        role=row["role"],
+                        is_active=row["is_active"],
+                        created_at=datetime.fromisoformat(row["created_at"]) if isinstance(row["created_at"], str) else row["created_at"]
+                    )
+                    for row in rows
+                ]
         except Exception as e:
-            logger.error(f"Error fetching users: {e}")
+            logger.error(f"Грешка при извличане на потребители: {e}")
             return []
     
     @strawberry.field
     def tenants(self, limit: int = 50) -> List[TenantType]:
         """
-        Query all tenants.
+        Заявка за всички тенанти.
         """
         try:
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM tenants LIMIT ?", (limit,))
-            rows = cursor.fetchall()
-            conn.close()
-            
-            return [
-                TenantType(
-                    id=row["id"],
-                    tenant_id=row["tenant_id"],
-                    tenant_name=row["tenant_name"],
-                    is_active=row["is_active"],
-                    created_at=row["created_at"]
-                )
-                for row in rows
-            ]
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT * FROM tenants LIMIT ?", (limit,))
+                rows = cursor.fetchall()
+
+                return [
+                    TenantType(
+                        id=row["id"],
+                        tenant_id=row["tenant_id"],
+                        tenant_name=row["tenant_name"],
+                        is_active=row["is_active"],
+                        created_at=datetime.fromisoformat(row["created_at"]) if isinstance(row["created_at"], str) else row["created_at"]
+                    )
+                    for row in rows
+                ]
         except Exception as e:
-            logger.error(f"Error fetching tenants: {e}")
+            logger.error(f"Грешка при извличане на тенанти: {e}")
             return []
     
     @strawberry.field
@@ -209,54 +207,53 @@ class Query:
         end_date: Optional[datetime] = None
     ) -> QualityMetricType:
         """
-        Query quality metrics for a date range.
+        Заявка за метрики за качество за определен период.
         """
         try:
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            
-            query = """
-                SELECT 
-                    COUNT(*) as total,
-                    AVG(delta_e) as avg_delta_e,
-                    SUM(CASE WHEN status = 'Pass' THEN 1 ELSE 0 END) as passed
-                FROM measurements
-                WHERE 1=1
-            """
-            params = []
-            
-            if start_date:
-                query += " AND timestamp >= ?"
-                params.append(start_date)
-            
-            if end_date:
-                query += " AND timestamp <= ?"
-                params.append(end_date)
-            
-            cursor.execute(query, params)
-            row = cursor.fetchone()
-            conn.close()
-            
-            total = row["total"] or 0
-            passed = row["passed"] or 0
-            avg_delta_e = row["avg_delta_e"] or 0.0
-            pass_rate = (passed / total * 100) if total > 0 else 0.0
-            
-            # Determine trend (simplified)
-            trend = "stable"
-            if avg_delta_e > 2.0:
-                trend = "increasing"
-            elif avg_delta_e < 1.0:
-                trend = "decreasing"
-            
-            return QualityMetricType(
-                total_measurements=total,
-                pass_rate=pass_rate,
-                average_delta_e=avg_delta_e,
-                trend=trend
-            )
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+
+                query = """
+                    SELECT
+                        COUNT(*) as total,
+                        AVG(delta_e) as avg_delta_e,
+                        SUM(CASE WHEN status = 'Pass' OR status = 'Успех' THEN 1 ELSE 0 END) as passed
+                    FROM measurements
+                    WHERE 1=1
+                """
+                params = []
+
+                if start_date:
+                    query += " AND timestamp >= ?"
+                    params.append(start_date.isoformat())
+
+                if end_date:
+                    query += " AND timestamp <= ?"
+                    params.append(end_date.isoformat())
+
+                cursor.execute(query, params)
+                row = cursor.fetchone()
+
+                total = row["total"] or 0
+                passed = row["passed"] or 0
+                avg_delta_e = row["avg_delta_e"] or 0.0
+                pass_rate = (passed / total * 100) if total > 0 else 0.0
+
+                # Determine trend (simplified)
+                trend = "stable"
+                if avg_delta_e > 2.0:
+                    trend = "increasing"
+                elif avg_delta_e < 1.0:
+                    trend = "decreasing"
+
+                return QualityMetricType(
+                    total_measurements=total,
+                    pass_rate=pass_rate,
+                    average_delta_e=avg_delta_e,
+                    trend=trend
+                )
         except Exception as e:
-            logger.error(f"Error fetching quality metrics: {e}")
+            logger.error(f"Грешка при извличане на метрики за качество: {e}")
             return QualityMetricType(
                 total_measurements=0,
                 pass_rate=0.0,
@@ -267,11 +264,11 @@ class Query:
     @strawberry.field
     def system_status(self) -> SystemStatusType:
         """
-        Query system status.
+        Заявка за статус на системата.
         """
         return SystemStatusType(
             status="healthy",
-            version="8.10.0",
+            version=ICAP_VERSION_DISPLAY,
             services={
                 "database": "healthy",
                 "redis": "healthy",
@@ -287,38 +284,34 @@ class Query:
         level: Optional[str] = None
     ) -> List[AlertType]:
         """
-        Query alerts with optional level filter.
+        Заявка за алерти с незадължителен филтър за ниво.
         """
         try:
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            
-            query = "SELECT * FROM audit_logs WHERE 1=1"
-            params = []
-            
-            if level:
-                query += " AND level = ?"
-                params.append(level)
-            
-            query += " ORDER BY timestamp DESC LIMIT ?"
-            params.append(limit)
-            
-            cursor.execute(query, params)
-            rows = cursor.fetchall()
-            conn.close()
-            
-            return [
-                AlertType(
-                    id=row["id"],
-                    level=row.get("level", "info"),
-                    title=row.get("action", "Alert"),
-                    message=row.get("details", ""),
-                    timestamp=row["timestamp"]
-                )
-                for row in rows
-            ]
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+
+                query = "SELECT * FROM measurements WHERE status != 'Pass' AND status != 'Успех'"
+                params = []
+
+                # Using measurements as a source for alerts if audit_logs table is not fully defined
+                query += " ORDER BY timestamp DESC LIMIT ?"
+                params.append(limit)
+
+                cursor.execute(query, params)
+                rows = cursor.fetchall()
+
+                return [
+                    AlertType(
+                        id=row["id"],
+                        level="warning",
+                        title=f"Отклонение в партида {row['batch_id']}",
+                        message=f"Delta E: {row['delta_e']} надвишава толеранса.",
+                        timestamp=datetime.fromisoformat(row["timestamp"]) if isinstance(row["timestamp"], str) else row["timestamp"]
+                    )
+                    for row in rows
+                ]
         except Exception as e:
-            logger.error(f"Error fetching alerts: {e}")
+            logger.error(f"Грешка при извличане на алерти: {e}")
             return []
 
 @strawberry.type
@@ -332,48 +325,59 @@ class Mutation:
         client_id: str,
         lab_sample: List[float],
         lab_standard: List[float],
-        method: str = "CIEDE2000"
+        method: str = "CIE2000"
     ) -> Optional[MeasurementType]:
         """
-        Create a new measurement.
+        Създаване на ново измерване.
         """
         try:
-            # Calculate Delta E (simplified - would use actual color engine)
-            delta_e = 1.5  # Placeholder
-            status = "Pass" if delta_e < 2.0 else "Fail"
+            engine = ColorEngine()
+            delta_e = engine.calculate_delta_e(lab_sample, lab_standard, method)
             
-            conn = database.get_db_connection()
-            cursor = conn.cursor()
-            cursor.execute(
-                """
-                INSERT INTO measurements 
-                (batch_id, operator_id, machine_id, client_id, delta_e, status, lab_sample, lab_standard, timestamp)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """,
-                (batch_id, operator_id, machine_id, client_id, delta_e, status, str(lab_sample), str(lab_standard), datetime.utcnow())
-            )
-            conn.commit()
+            # Fetch tolerance for client
+            tolerance = 1.0
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT tolerance FROM clients WHERE id = ?", (client_id,))
+                row = cursor.fetchone()
+                if row:
+                    tolerance = row["tolerance"]
+
+            status = "Успех" if delta_e <= tolerance else "Неуспех"
+            now = datetime.utcnow().isoformat()
             
-            cursor.execute("SELECT * FROM measurements WHERE id = ?", (cursor.lastrowid,))
-            row = cursor.fetchone()
-            conn.close()
-            
-            if row:
-                return MeasurementType(
-                    id=row["id"],
-                    batch_id=row["batch_id"],
-                    operator_id=row["operator_id"],
-                    machine_id=row["machine_id"],
-                    client_id=row["client_id"],
-                    delta_e=row["delta_e"],
-                    status=row["status"],
-                    timestamp=row["timestamp"],
-                    lab_sample=row["lab_sample"],
-                    lab_standard=row["lab_standard"]
+            with database.get_db_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO measurements
+                    (batch_id, operator_id, machine_id, client_id, delta_e, status, timestamp, method, tenant_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (batch_id, operator_id, machine_id, client_id, delta_e, status, now, method, 'default')
                 )
+                conn.commit()
+                last_id = cursor.lastrowid
+
+                cursor.execute("SELECT * FROM measurements WHERE id = ?", (last_id,))
+                row = cursor.fetchone()
+
+                if row:
+                    return MeasurementType(
+                        id=row["id"],
+                        batch_id=row["batch_id"],
+                        operator_id=row["operator_id"],
+                        machine_id=row["machine_id"],
+                        client_id=row["client_id"],
+                        delta_e=row["delta_e"],
+                        status=row["status"],
+                        timestamp=datetime.fromisoformat(row["timestamp"]),
+                        lab_sample=lab_sample,
+                        lab_standard=lab_standard
+                    )
             return None
         except Exception as e:
-            logger.error(f"Error creating measurement: {e}")
+            logger.error(f"Грешка при създаване на измерване: {e}")
             return None
 
 # Create GraphQL schema
