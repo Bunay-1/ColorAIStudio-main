@@ -8,7 +8,11 @@
 - **Architecture:** Пълно рефакториране на `irm_api.py` — изнасяне на логиката в `app/main.py` и `app/core/lifecycle.py`.
 - **Performance:** Добавена 30-секундна пауза в `background_indexer` при успешно изпълнение за оптимизация на ресурсите.
 - **Security:** Имплементирана автентикация за всички legacy ендпойнти в `app/api/legacy.py`.
+- **Security:** Блокиране на wildcard CORS в production среда.
+- **Security:** Маркиране и деактивиране на демо ендпойнти (`hsi_analyze`, `switch_model`) в production.
 - **Git:** Конфигуриране на `.gitattributes` за поддръжка на Git LFS за ML модели (`.pt`, `.pth`, `.onnx`).
+- **Git:** Добавяне на `icap.db` в `.gitignore`.
+- **IoT:** Изнасяне на твърдо кодирани прагове в `.env` (напр. `OPC_UA_TEMP_THRESHOLD`).
 
 ### Променено
 - **Versioning:** Ресет на версията до 0.1.0 по препоръка за нов проект. Актуализация в целия технологичен стек.

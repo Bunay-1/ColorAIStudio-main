@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from irm_api import app
+from app.main import app
 
 def test_health_check():
     with TestClient(app) as client:

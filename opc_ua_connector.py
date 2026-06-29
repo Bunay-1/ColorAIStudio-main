@@ -19,6 +19,8 @@ load_dotenv()
 # Конфигурация от environment variables
 OPC_UA_SERVER_URL = os.environ.get("OPC_UA_SERVER_URL", "opc.tcp://localhost:4840/freeopcua/server/")
 API_URL = os.environ.get("API_URL", "http://localhost:8000") + "/diagnose"
+OPC_UA_TEMP_THRESHOLD = float(os.environ.get("OPC_UA_TEMP_THRESHOLD", "85.0"))
+
 # Списък с Node IDs за наблюдение (може да се конфигурира чрез environment variable)
 NODES_TO_WATCH_STR = os.environ.get("OPC_UA_NODES_TO_WATCH", "ns=2;i=2,ns=2;i=3")
 NODES_TO_WATCH = NODES_TO_WATCH_STR.split(",") if NODES_TO_WATCH_STR else [
@@ -53,8 +55,8 @@ class IRM_OPCUA_Connector:
                     
                     print(f"📊 {browse_name.Name}: {value}")
                     
-                    # Примерна логика за аларма (напр. температура > 85)
-                    if "Temp" in browse_name.Name and value > 85:
+                    # Примерна логика за аларма (напр. температура > threshold)
+                    if "Temp" in browse_name.Name and value > OPC_UA_TEMP_THRESHOLD:
                         await self.send_to_irm(browse_name.Name, value)
                         
                 except Exception as e:
@@ -68,7 +70,7 @@ class IRM_OPCUA_Connector:
         
         payload = {
             "prompt": f"Индустриален сензор {name} отчете критична стойност: {value}.",
-            "context": f"Протокол: OPC-UA, Стойност: {value}, Праг: 85.0",
+            "context": f"Протокол: OPC-UA, Стойност: {value}, Праг: {OPC_UA_TEMP_THRESHOLD}",
             "use_rag": True
         }
         

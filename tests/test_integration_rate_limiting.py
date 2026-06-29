@@ -13,7 +13,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from irm_api import app
+from app.main import app
 from utils.rate_limiter import (
     check_user_rate_limit, configure_role_limits, configure_operation_limits,
     RateLimiter, get_user_rate_limit_status, reset_user_rate_limit

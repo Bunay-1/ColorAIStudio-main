@@ -13,7 +13,7 @@ import sys
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from irm_api import app
+from app.main import app
 from utils.auth import create_user, UserCreate, authenticate_user, create_access_token
 from utils.multi_tenant import create_tenant, delete_tenant
 from utils.audit_logger import query_audit_logs

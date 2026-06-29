@@ -9,7 +9,7 @@ import asyncio
 import os
 import tempfile
 from fastapi.testclient import TestClient
-from irm_api import app
+from app.main import app
 
 @pytest.fixture
 def client():

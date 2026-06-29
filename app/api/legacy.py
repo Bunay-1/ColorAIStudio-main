@@ -58,7 +58,7 @@ async def add_client(data: ClientCreateRequest, conn=Depends(get_db)):
         logger.error(f"Грешка в базата данни: {e}")
         raise HTTPException(status_code=500, detail="Грешка в базата данни")
 
-@router.get("/model_registry")
+@router.get("/model_registry", dependencies=[Depends(get_current_active_user)])
 async def get_model_registry():
     if os.path.exists("model_registry.json"):
         with open("model_registry.json", "r") as f:
@@ -73,7 +73,7 @@ async def legacy_vision_analyze(req: Request, file: UploadFile = File(...)):
 async def legacy_vision_micro_analyze(req: Request, file: UploadFile = File(...)):
     return await wrap_legacy_response(vision.vision_micro_analyze(req, file))
 
-@router.get("/rag_stats")
+@router.get("/rag_stats", dependencies=[Depends(get_current_active_user)])
 async def legacy_rag_stats(req: Request):
     return await wrap_legacy_response(rag.get_rag_stats(req))
 
@@ -111,7 +111,7 @@ async def legacy_train(request: Any, req: Request):
     from utils.models import TrainRequest
     return await wrap_legacy_response(training.train_model(request, req))
 
-@router.get("/train_status")
+@router.get("/train_status", dependencies=[Depends(get_current_active_user)])
 async def legacy_train_status(req: Request):
     return await wrap_legacy_response(asyncio.sleep(0, result=training.get_train_status(req)))
 
@@ -123,7 +123,7 @@ async def clear_database(req: Request):
         os.remove(state_file)
     return JSONResponse(content={"message": "Базата данни и индексерът са изчистени успешно."}, headers=DEPRECATED_HEADERS)
 
-@router.get("/models_list")
+@router.get("/models_list", dependencies=[Depends(get_current_active_user)])
 async def get_models_list():
     # [DEMO]
     return JSONResponse(
@@ -131,7 +131,7 @@ async def get_models_list():
         headers=DEPRECATED_HEADERS
     )
 
-@router.post("/switch_model/{name}")
+@router.post("/switch_model/{name}", dependencies=[Depends(get_current_active_user)])
 async def switch_model(name: str):
     # [DEMO]
     if os.environ.get("ICAP_ENVIRONMENT") == "production":
@@ -146,20 +146,20 @@ async def predict_batch_risk(process_params: dict, req: Request):
 async def legacy_agent_task(request: dict, req: Request):
     return await wrap_legacy_response(agents.execute_agent_task(request, req))
 
-@router.get("/kg_export")
+@router.get("/kg_export", dependencies=[Depends(get_current_active_user)])
 async def kg_export():
     if os.path.exists("Docs/knowledge_graph.json"):
         with open("Docs/knowledge_graph.json", "r") as f:
             return JSONResponse(content=json.load(f), headers=DEPRECATED_HEADERS)
     return JSONResponse(content={"nodes": [], "links": []}, headers=DEPRECATED_HEADERS)
 
-@router.get("/kg_reason/{issue}")
+@router.get("/kg_reason/{issue}", dependencies=[Depends(get_current_active_user)])
 async def kg_reason(issue: str):
     from knowledge_graph import IndustrialKG
     kg = IndustrialKG()
     return JSONResponse(content={"reasoning": kg.find_reasoning_path(issue)}, headers=DEPRECATED_HEADERS)
 
-@router.post("/hsi_analyze")
+@router.post("/hsi_analyze", dependencies=[Depends(get_current_active_user)])
 async def hsi_analyze(data: dict):
     # [DEMO]
     if os.environ.get("ICAP_ENVIRONMENT") == "production":
@@ -176,11 +176,11 @@ async def hsi_analyze(data: dict):
         headers=DEPRECATED_HEADERS
     )
 
-@router.get("/kpi_data")
+@router.get("/kpi_data", dependencies=[Depends(get_current_active_user)])
 async def legacy_kpi_data():
     return await wrap_legacy_response(iot.get_kpi_data())
 
-@router.get("/fleet_status")
+@router.get("/fleet_status", dependencies=[Depends(get_current_active_user)])
 async def legacy_fleet_status():
     return await wrap_legacy_response(iot.api_get_fleet_status())
 
