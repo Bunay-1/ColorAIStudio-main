@@ -31,6 +31,7 @@ env.bak/
 venv.bak/
 
 # Database
+icap.db
 *.db
 *.sqlite3
 

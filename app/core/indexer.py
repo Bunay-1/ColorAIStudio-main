@@ -61,6 +61,7 @@ async def background_indexer(icap_state, manager):
                 await manager.broadcast({"type": "rag_update", "stats": stats})
 
             consecutive_errors = 0 # Reset errors on success
+            await asyncio.sleep(30) # Пауза при успех за намаляване на натоварването
 
         except asyncio.CancelledError:
             logger.info("Background indexer task cancelled.")
