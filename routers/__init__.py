@@ -10,7 +10,7 @@ except (ImportError, ValueError):
     COLOUR_AVAILABLE = False
 
 if COLOUR_AVAILABLE:
-    from routers import color, vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache
+    from routers import color, vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, clients, models
     __all__ = [
         'color',
         'vision',
@@ -24,11 +24,13 @@ if COLOUR_AVAILABLE:
         'webhooks',
         'compliance',
         'mfa',
-        'cache'
+        'cache',
+        'clients',
+        'models'
     ]
 else:
     # If colour-science is not available, skip color router
-    from routers import vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache
+    from routers import vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, clients, models
     __all__ = [
         'vision',
         'rag',
@@ -41,5 +43,7 @@ else:
         'webhooks',
         'compliance',
         'mfa',
-        'cache'
+        'cache',
+        'clients',
+        'models'
     ]
