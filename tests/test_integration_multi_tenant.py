@@ -13,7 +13,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from irm_api import app
+from app.main import app
 from utils.multi_tenant import (
     create_tenant, get_tenant, get_all_tenants, update_tenant, delete_tenant,
     activate_tenant, deactivate_tenant, get_tenant_stats, TenantContext

@@ -62,6 +62,10 @@ async def global_exception_handler(request: Request, exc: Exception):
     )
 
 ALLOWED_ORIGINS = os.environ.get("ICAP_ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+if environment == "production" and "*" in ALLOWED_ORIGINS:
+    logger.error("❌ КРИТИЧНА ГРЕШКА В СИГУРНОСТТА: Използване на wildcard '*' за CORS в production!")
+    raise RuntimeError("Wildcard CORS не е разрешен в production среда за по-добра сигурност.")
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,

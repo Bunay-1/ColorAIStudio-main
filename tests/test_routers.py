@@ -1,6 +1,6 @@
 import pytest
 from fastapi.testclient import TestClient
-from irm_api import app
+from app.main import app
 
 # For testing, we need to trigger startup or mock the state
 @pytest.fixture(scope="module")

@@ -13,7 +13,7 @@ import os
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from irm_api import app
+from app.main import app
 from utils.audit_logger import (
     AuditAction, log_audit_event, query_audit_logs, get_user_activity_summary,
     get_audit_statistics, AuditSeverity
