@@ -2,6 +2,25 @@
 
 Всички значими промени по проекта се записват в този файл. Форматът е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [8.11.4] — 2026-06-29
+
+### Добавено
+- **Security:** Глобален exception handler за предотвратяване изтичането на stack traces.
+- **Security:** Автоматизирано сканиране за сигурност с Bandit и Semgrep в CI/CD.
+- **Security:** Документация за сигурност (`SECURITY.md`) и насоки за допринасяне (`CONTRIBUTING.md`).
+- **DevOps:** Kubernetes Secrets интеграция за чувствителни данни.
+- **Documentation:** Двуезична поддръжка (BG + EN) за основните документи.
+- **Testing:** Badge за test coverage в README.
+
+### Променено
+- **Architecture:** Рефакториране на `irm_api.py` чрез изнасяне на legacy ендпойнтите в `app/api/legacy.py`.
+- **Architecture:** Имплементиране на Dependency Injection за клиенти.
+- **Versioning:** Актуализация на версията на 8.11.4 в целия технологичен стек.
+- **Dependencies:** Фиксиране на версиите на всички зависимости в `requirements.txt`.
+
+### Коригирано
+- **Repository:** Изчистване на `__pycache__` и компилирани файлове от Git индекса.
+
 ## [8.11.3] — 2026-06-27
 
 ### Добавено
