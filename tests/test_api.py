@@ -25,9 +25,9 @@ def test_analyze_color_basic():
         "operator_id": "TEST-OP",
         "machine_id": "TEST-MACH"
     }
-    # Пътят е /color/analyze според routers/color.py
+    # Пътят е /v1/color/analyze според app/main.py
     with TestClient(app) as client:
-        response = client.post("/color/analyze", json=payload)
+        response = client.post("/v1/color/analyze", json=payload)
         assert response.status_code == 200
         data = response.json()
         assert "delta_e" in data

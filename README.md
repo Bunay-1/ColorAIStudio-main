@@ -1,6 +1,6 @@
-# Industrial Color AI Platform (ICAP) v0.2.3 Enterprise
+# Industrial Color AI Platform (ICAP) v0.2.4 Enterprise
 
-![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v0.2.3-blue?style=for-the-badge&logo=ai)
+![ICAP Banner](https://img.shields.io/badge/Industrial_AI-v0.2.4-blue?style=for-the-badge&logo=ai)
 ![ISO 9001 Compliance Support](https://img.shields.io/badge/ISO_9001-Compliance_Support-green?style=for-the-badge)
 ![License: Proprietary](https://img.shields.io/badge/License-Proprietary-red?style=for-the-badge)
 [![CI Status](https://github.com/your-username/icap/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/your-username/icap/actions)
@@ -8,7 +8,7 @@
 ## 🚀 Общ Преглед
 **Industrial Color AI Platform (ICAP)** е надеждно софтуерно решение за автоматизиран качествен контрол и колориметричен анализ. Проектирана за индустриална експлоатация, платформата осигурява прецизни измервания и проследимост на данните чрез интеграция на компютърно зрение и семантично търсене.
 
-### 🌟 Ключови подобрения в v0.2.3 Enterprise [Stable]:
+### 🌟 Ключови подобрения в v0.2.4 Enterprise [Stable]:
 - **Complete Service Decoupling**: Пълно разделяне на бизнес логиката от API слоя чрез нови услуги за Vision, RAG, Color, Training и IoT.
 - **Unified Proxy Architecture**: Legacy порталът вече работи изключително чрез услугите, осигурявайки 100% стабилност и сигурност.
 - **Health Observability**: Подобрени здравни сонди за детайлна диагностика на услугите.
@@ -152,8 +152,8 @@ docker-compose up -d
 
 Алтернативно, за самостоятелен контейнер:
 ```bash
-docker build -t icap-v0.2.3 .
-docker run -p 8000:8000 --env-file .env icap-v0.2.3
+docker build -t icap-v0.2.4 .
+docker run -p 8000:8000 --env-file .env icap-v0.2.4
 ```
 
 ### 3. Ръчна инсталация
@@ -182,4 +182,4 @@ ICAP включва вградена система за **Audit Trail**, коя
 **Забележка относно AI терминологията:** Платформата използва "AI" като общ термин за интелигентни функции. Функциите за диагностика (RCA) в момента се базират на усъвършенствани евристични алгоритми и експертни системи за подпомагане на вземането на решения (DSS), докато Vision Engine (YOLO/ViT) използва дълбоко машинно обучение с валидирани метрики.
 
 ---
-*Изготвено от: ICAP Engineering Team | v0.2.3 | 2026*
+*Изготвено от: ICAP Engineering Team | v0.2.4 | 2026*

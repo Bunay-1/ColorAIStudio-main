@@ -281,10 +281,15 @@ def transform_response(data: Any, from_version: APIVersion, to_version: APIVersi
         # No transformation defined
         return data
 
-# Version negotiation middleware
-async def version_middleware(request: Request, call_next):
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class VersionMiddleware(BaseHTTPMiddleware):
     """
     Middleware to handle API versioning.
+    """
+    async def dispatch(self, request: Request, call_next):
+        """
+        Middleware to handle API versioning.
     
     Args:
         request: FastAPI request
@@ -293,21 +298,23 @@ async def version_middleware(request: Request, call_next):
     Returns:
         Response with version headers
     """
-    # Extract version from request
-    accept = request.headers.get("accept")
-    api_version = request.headers.get("API-Version")
-    
-    try:
-        version = get_api_version(request, accept, api_version)
-        request.state.api_version = version
-    except HTTPException:
-        # Let the exception propagate
-        pass
-    
-    response = await call_next(request)
-    
-    # Add version headers to response
-    if hasattr(request.state, 'api_version'):
-        add_version_headers(response, request.state.api_version)
-    
-    return response
+        # Extract version from request
+        accept = request.headers.get("accept")
+        api_version = request.headers.get("API-Version")
+
+        try:
+            version = get_api_version(request, accept, api_version)
+            request.state.api_version = version
+        except HTTPException:
+            # Let the exception propagate
+            pass
+
+        response = await call_next(request)
+
+        # Add version headers to response
+        if hasattr(request.state, 'api_version'):
+            add_version_headers(response, request.state.api_version)
+
+        return response
+
+version_middleware = VersionMiddleware

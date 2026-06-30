@@ -23,22 +23,22 @@ limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/diagnose", dependencies=[Depends(check_permission("analyze"))])
 @limiter.limit("20/minute")
-async def diagnose(request: ReasoningRequest, req: Request, current_user: dict = Depends(get_current_user)):
+async def diagnose(request: Request, payload: ReasoningRequest, current_user: dict = Depends(get_current_user)):
     """Ендпоинт за RAG диагностика."""
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "heavy")
     
     # Cache logic stays in router
-    cache_key = f"rag_query:{hash(request.query)}:{request.use_rag}:{bool(request.image_data)}"
-    if not request.image_data:
+    cache_key = f"rag_query:{hash(payload.prompt)}:{payload.use_rag}:{bool(payload.image_data)}"
+    if not payload.image_data:
         cached_result = cache.get(cache_key)
         if cached_result is not None:
             request_counter.labels(endpoint="/rag/diagnose", method="POST", status="success").inc()
             return cached_result
 
     with rag_query_duration_seconds.labels("diagnose_rag_lookup").time():
-        result = await rag_service.query_rag(request, req.app.state.icap, req.app.state.manager)
+        result = await rag_service.query_rag(payload, request.app.state.icap, request.app.state.manager)
 
-    if not request.image_data:
+    if not payload.image_data:
         cache.set(cache_key, result, ttl=300)
     
     log_audit_event(
@@ -46,45 +46,45 @@ async def diagnose(request: ReasoningRequest, req: Request, current_user: dict =
         user_id=current_user.get("username", "anonymous"),
         user_role=current_user.get("role", "OPERATOR"),
         tenant_id=current_user.get("tenant_id", "default"),
-        details={"action": "rag_diagnose", "use_rag": request.use_rag},
-        ip_address=req.client.host if req.client else None
+        details={"action": "rag_diagnose", "use_rag": payload.use_rag},
+        ip_address=request.client.host if request.client else None
     )
     request_counter.labels(endpoint="/rag/diagnose", method="POST", status="success").inc()
     return result
 
 @router.post("/index_document", dependencies=[Depends(check_permission("configure"))])
 @limiter.limit("10/minute")
-async def index_document(request: DocumentIndexRequest, background_tasks: BackgroundTasks, req: Request, current_user: dict = Depends(get_current_user)):
+async def index_document(request: Request, payload: DocumentIndexRequest, background_tasks: BackgroundTasks, current_user: dict = Depends(get_current_user)):
     """Ендпоинт за индексиране на документи."""
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "heavy")
     
-    response = await rag_service.index_docs(request.file_path, req.app.state.icap, req.app.state.manager, background_tasks)
+    response = await rag_service.index_docs(payload.file_path, request.app.state.icap, request.app.state.manager, background_tasks)
 
     log_audit_event(
         action=AuditAction.DATA_MODIFY,
         user_id=current_user.get("username", "anonymous"),
         user_role=current_user.get("role", "OPERATOR"),
         tenant_id=current_user.get("tenant_id", "default"),
-        details={"action": "index_document", "path": request.file_path},
-        ip_address=req.client.host if req.client else None
+        details={"action": "index_document", "path": payload.file_path},
+        ip_address=request.client.host if request.client else None
     )
     request_counter.labels(endpoint="/rag/index_document", method="POST", status="success").inc()
     return response
 
 @router.get("/stats", dependencies=[Depends(check_permission("view"))])
 @limiter.limit("60/minute")  # 60 requests per minute per IP (lightweight endpoint)
-async def get_rag_stats(req: Request, current_user: dict = Depends(get_current_user)):
+async def get_rag_stats(request: Request, current_user: dict = Depends(get_current_user)):
     # Check user rate limit (light operation)
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "light")
     
-    icap = req.app.state.icap
+    icap = request.app.state.icap
     request_counter.labels(endpoint="/rag/stats", method="GET", status="success").inc()
     return await icap.rag.get_stats()
 
 @router.post("/clear-database", dependencies=[Depends(check_permission("configure"))])
-async def clear_database(req: Request, current_user: dict = Depends(get_current_user)):
+async def clear_database(request: Request, current_user: dict = Depends(get_current_user)):
     """Изчиства векторната база данни и състоянието на индексерa."""
-    icap = req.app.state.icap
+    icap = request.app.state.icap
     await icap.rag.reset_collection()
     state_file = "AuditTrail/indexer_state.json"
     if os.path.exists(state_file):
@@ -96,7 +96,7 @@ async def clear_database(req: Request, current_user: dict = Depends(get_current_
         user_role=current_user.get("role", "ADMIN"),
         tenant_id=current_user.get("tenant_id", "default"),
         details={"action": "clear_database"},
-        ip_address=req.client.host if req.client else None
+        ip_address=request.client.host if request.client else None
     )
 
     return {"message": "Базата данни и индексерът са изчистени успешно."}

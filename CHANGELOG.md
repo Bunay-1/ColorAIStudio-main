@@ -2,6 +2,15 @@
 
 Всички значими промени по проекта се записват в този файл. Форматът е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.2.4] — 2026-06-30
+
+### Добавено
+- **Security:** Интегрирани `SecurityHeadersMiddleware` и `CSRFMiddleware` в основното FastAPI приложение.
+- **Security:** Подобрена защита срещу common web vulnerabilities (XSS, CSRF, Clickjacking).
+
+### Променено
+- **Versioning:** Актуализация на версията на платформата до 0.2.4 в целия технологичен стек.
+
 ## [0.2.3] — 2026-06-30
 
 ### Добавено

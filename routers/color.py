@@ -21,25 +21,25 @@ from utils.rate_limiter import check_user_rate_limit
 from utils.metrics import request_counter, delta_e_duration_seconds
 from utils.redis_cache import cache
 
-router = APIRouter(prefix="/color", tags=["Color Analysis"])
+router = APIRouter(tags=["Color Analysis"])
 logger = logging.getLogger("IRM_Color_Router")
 limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/analyze", dependencies=[Depends(check_permission("analyze"))])
 @limiter.limit("100/minute")
-async def analyze_color(request: ColorAnalysisRequest, req: Request, current_user: dict = Depends(get_current_user)):
+async def analyze_color(request: Request, payload: ColorAnalysisRequest, current_user: dict = Depends(get_current_user)):
     """Ендпоинт за колориметричен анализ."""
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "light")
     
     # Cache logic stays in router
-    cache_key = f"delta_e:{request.method}:{tuple(request.lab_sample)}:{tuple(request.lab_standard)}"
+    cache_key = f"delta_e:{payload.method}:{tuple(payload.lab_sample)}:{tuple(payload.lab_standard)}"
     cached_res = cache.get(cache_key)
     if cached_res:
         return cached_res
 
     response = await color_service.process_color_analysis(
-        request, req.app.state.icap, req.app.state.alert_system,
-        req.app.state.log_to_audit_trail, req.client.host if req.client else None
+        payload, request.app.state.icap, request.app.state.alert_system,
+        request.app.state.log_to_audit_trail, request.client.host if request.client else None
     )
 
     cache.set(cache_key, response, ttl=600)
@@ -49,23 +49,23 @@ async def analyze_color(request: ColorAnalysisRequest, req: Request, current_use
         user_id=current_user.get("username", "anonymous"),
         user_role=current_user.get("role", "OPERATOR"),
         tenant_id=current_user.get("tenant_id", "default"),
-        details={"batch_id": request.batch_id, "status": response["status"]},
-        ip_address=req.client.host if req.client else None
+        details={"batch_id": payload.batch_id, "status": response["status"]},
+        ip_address=request.client.host if request.client else None
     )
     request_counter.labels(endpoint="/color/analyze", method="POST", status="success").inc()
     return response
 
 @router.post("/predict_trend", dependencies=[Depends(check_permission("analyze"))])
 @limiter.limit("50/minute")  # 50 requests per minute per IP
-async def predict_trend(request: TrendRequest, req: Request, current_user: dict = Depends(get_current_user)):
+async def predict_trend(request: Request, payload: TrendRequest, current_user: dict = Depends(get_current_user)):
     """Ендпоинт за прогнозиране на тренд и дрейф."""
     # Check user rate limit
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "light")
     
-    icap = req.app.state.icap
-    trend_result = icap.ai_analysis.predict_trend(request.historical_de)
-    drift = icap.ai_analysis.drift_predictor(request.historical_de, request.tolerance)
-    anomalies = icap.ai_analysis.detect_anomalies(request.historical_de)
+    icap = request.app.state.icap
+    trend_result = icap.ai_analysis.predict_trend(payload.historical_de)
+    drift = icap.ai_analysis.drift_predictor(payload.historical_de, payload.tolerance)
+    anomalies = icap.ai_analysis.detect_anomalies(payload.historical_de)
     
     # Log audit event
     log_audit_event(
@@ -75,9 +75,9 @@ async def predict_trend(request: TrendRequest, req: Request, current_user: dict 
         tenant_id=current_user.get("tenant_id", "default"),
         details={
             "action": "predict_trend",
-            "data_points": len(request.historical_de)
+            "data_points": len(payload.historical_de)
         },
-        ip_address=req.client.host if req.client else None
+        ip_address=request.client.host if request.client else None
     )
 
     response = {
@@ -91,12 +91,12 @@ async def predict_trend(request: TrendRequest, req: Request, current_user: dict 
 
 @router.post("/recipe_formulation", dependencies=[Depends(check_permission("analyze"))])
 @limiter.limit("20/minute")  # 20 requests per minute per IP (computationally intensive)
-async def recipe_formulation(request: ColorAnalysisRequest, req: Request, current_user: dict = Depends(get_current_user)):
+async def recipe_formulation(request: Request, payload: ColorAnalysisRequest, current_user: dict = Depends(get_current_user)):
     """Ендпоинт за AI изчисляване на рецепта."""
     # Check user rate limit (heavy operation)
     check_user_rate_limit(current_user.get("username", "anonymous"), current_user.get("role", "OPERATOR"), "heavy")
     
-    icap = req.app.state.icap
+    icap = request.app.state.icap
     pigment_db = [
         {"name": "Titanium White", "lab": [98, 0, 0]},
         {"name": "Carbon Black", "lab": [5, 0, 0]},
@@ -104,7 +104,7 @@ async def recipe_formulation(request: ColorAnalysisRequest, req: Request, curren
         {"name": "Iron Oxide Yellow", "lab": [70, 10, 50]},
         {"name": "Phthalo Blue", "lab": [30, -10, -40]},
     ]
-    result = icap.ai_analysis.recipe_formulation(request.lab_standard, pigment_db)
+    result = icap.ai_analysis.recipe_formulation(payload.lab_standard, pigment_db)
     
     # Log audit event
     log_audit_event(
@@ -114,9 +114,9 @@ async def recipe_formulation(request: ColorAnalysisRequest, req: Request, curren
         tenant_id=current_user.get("tenant_id", "default"),
         details={
             "action": "recipe_formulation",
-            "target_lab": request.lab_standard
+            "target_lab": payload.lab_standard
         },
-        ip_address=req.client.host if req.client else None
+        ip_address=request.client.host if request.client else None
     )
     
     request_counter.labels(endpoint="/color/recipe_formulation", method="POST", status="success").inc()

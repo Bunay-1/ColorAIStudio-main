@@ -4,7 +4,7 @@ Analytics Router for ICAP Enterprise
 REST API endpoints for advanced analytics and reporting.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import List, Optional
 from datetime import datetime, timedelta
 import logging
@@ -434,9 +434,9 @@ async def get_dashboard_data(
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.post("/predict-batch-risk", dependencies=[Depends(get_current_user)])
-async def predict_batch_risk(process_params: dict, req: Request):
+async def predict_batch_risk(process_params: dict, request: Request):
     """Предсказва риска за качеството на партидата на база параметри на процеса."""
-    icap = req.app.state.icap
+    icap = request.app.state.icap
     try:
         risk_data = icap.ai_analysis.predict_quality_risk(process_params)
         return risk_data
