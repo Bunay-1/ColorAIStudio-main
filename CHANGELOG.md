@@ -2,6 +2,29 @@
 
 Всички значими промени по проекта се записват в този файл. Форматът е базиран на [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [0.2.2] — 2026-06-30
+
+### Добавено
+- **Services:** Нови услуги `services/vision_service.py`, `services/rag_service.py`, `services/color_service.py`, `services/training_service.py` и `services/iot_business_service.py`.
+- **Architecture:** Пълно разделяне на бизнес логиката от API контролерите за по-висока стабилност на legacy прокси слоя.
+- **Testing:** Разширени интеграционни тестове за legacy прокси функционалността.
+
+### Променено
+- **API:** Всички рутери вече използват единствено услуги за изпълнение на бизнес логиката.
+- **Versioning:** Актуализация до версия 0.2.2.
+
+## [0.2.1] — 2026-06-30
+
+### Добавено
+- **Services:** Рефакториране на бизнес логиката за клиенти и модели в нови модули `services/client_service.py` и `services/model_service.py`.
+- **Testing:** Нови Unit тестове за `ConnectionManager` в `tests/test_core.py`.
+- **API:** Пълна имплементация на Kubernetes здравни сонди в `app/api/health.py`.
+- **CI/CD:** Единен и оптимизиран пайплайн в `.github/workflows/ci-cd.yml`.
+
+### Променено
+- **Architecture:** Преминаване към сервизно-ориентиран подход за по-лесно тестване и поддръжка.
+- **Versioning:** Актуализация до версия 0.2.1.
+
 ## [0.2.0] — 2026-06-30
 
 ### Добавено

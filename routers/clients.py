@@ -11,6 +11,7 @@ import logging
 import database
 from app.core.models import ClientCreateRequest
 from utils.auth import get_current_active_user
+from services import client_service
 
 router = APIRouter(tags=["Clients"])
 logger = logging.getLogger("Clients_Router")
@@ -30,12 +31,8 @@ async def get_clients(current_user: dict = Depends(get_current_active_user), con
     Връща списък с всички регистрирани клиенти.
     """
     try:
-        cursor = conn.cursor()
-        cursor.execute("SELECT * FROM clients")
-        rows = cursor.fetchall()
-        return {row["id"]: dict(row) for row in rows}
-    except Exception as e:
-        logger.error(f"Грешка в базата данни: {e}")
+        return await client_service.get_all_clients(conn)
+    except Exception:
         raise HTTPException(status_code=500, detail="Грешка в базата данни")
 
 @router.post("/", status_code=status.HTTP_201_CREATED, summary="Добавяне на нов клиент")
@@ -44,12 +41,6 @@ async def add_client(data: ClientCreateRequest, current_user: dict = Depends(get
     Добавя нов клиент или обновява съществуващ.
     """
     try:
-        cursor = conn.cursor()
-        client_id = data.name.upper().replace(" ", "_")
-        cursor.execute("INSERT OR REPLACE INTO clients (id, name, tolerance, preferred_method) VALUES (?, ?, ?, ?)",
-                       (client_id, data.name, data.tolerance, data.preferred_method))
-        conn.commit()
-        return {"message": "Клиентът е добавен/обновен успешно", "id": client_id}
-    except Exception as e:
-        logger.error(f"Грешка в базата данни: {e}")
+        return await client_service.create_or_update_client(data, conn)
+    except Exception:
         raise HTTPException(status_code=500, detail="Грешка в базата данни")

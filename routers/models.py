@@ -11,6 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 
 from utils.auth import get_current_active_user
+from services import model_service
 
 router = APIRouter(tags=["Models"])
 logger = logging.getLogger("Models_Router")
@@ -20,32 +21,16 @@ async def get_model_registry(current_user: dict = Depends(get_current_active_use
     """
     Връща съдържанието на регистъра с AI модели.
     """
-    registry_path = "model_registry.json"
-    if os.path.exists(registry_path):
-        try:
-            with open(registry_path, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception as e:
-            logger.error(f"Грешка при четене на моделния регистър: {e}")
-            raise HTTPException(status_code=500, detail="Вътрешна грешка при четене на данни")
-    return []
+    return await model_service.get_model_registry()
 
 @router.get("/list", summary="Списък с налични модели [DEMO]")
 async def get_models_list(current_user: dict = Depends(get_current_active_user)):
     """
     Връща списък с наличните за използване модели (симулирани данни).
     """
-    return {
-        "models": [
-            {"id": "irm-industrial-v8.9", "name": "IRM Industrial v8.9", "type": "Vision"},
-            {"id": "irm-base-v1", "name": "IRM Base v1", "type": "Color"}
-        ],
-        "note": "Симулирани данни за демо цели"
-    }
+    return await model_service.get_available_models()
 
 @router.post("/switch/{name}", dependencies=[Depends(get_current_active_user)])
 async def switch_model(name: str):
     """Превключване към различен AI модел [DEMO]."""
-    if os.environ.get("ICAP_ENVIRONMENT") == "production":
-         raise HTTPException(status_code=403, detail="Този ендпойнт е деактивиран в production среда.")
-    return {"status": "success", "message": f"Моделът е сменен на {name}"}
+    return await model_service.switch_model(name)
