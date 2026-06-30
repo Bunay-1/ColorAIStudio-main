@@ -233,12 +233,14 @@ def ensure_tenant_directory(base_path: str, tenant_id: str = None):
     os.makedirs(tenant_path, exist_ok=True)
     return tenant_path
 
-class TenantMiddleware:
+from starlette.middleware.base import BaseHTTPMiddleware
+
+class TenantMiddleware(BaseHTTPMiddleware):
     """
     FastAPI middleware to automatically set tenant context from headers.
     """
     
-    async def __call__(self, request: Request, call_next):
+    async def dispatch(self, request: Request, call_next):
         # Extract tenant from header
         tenant_id = request.headers.get("X-Tenant-ID")
         

@@ -55,10 +55,15 @@ class QualityMetricType:
     trend: str
 
 @strawberry.type
+class ServiceStatusType:
+    name: str
+    status: str
+
+@strawberry.type
 class SystemStatusType:
     status: str
     version: str
-    services: Dict[str, str]
+    services: List[ServiceStatusType]
 
 @strawberry.type
 class AlertType:
@@ -270,12 +275,12 @@ class Query:
         return SystemStatusType(
             status="healthy",
             version=ICAP_VERSION_DISPLAY,
-            services={
-                "database": "healthy",
-                "redis": "healthy",
-                "qdrant": "healthy",
-                "ollama": "healthy"
-            }
+            services=[
+                ServiceStatusType(name="database", status="healthy"),
+                ServiceStatusType(name="redis", status="healthy"),
+                ServiceStatusType(name="qdrant", status="healthy"),
+                ServiceStatusType(name="ollama", status="healthy")
+            ]
         )
     
     @strawberry.field

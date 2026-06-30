@@ -13,6 +13,8 @@ from utils.correlation_id import CorrelationIDMiddleware
 from utils.tracing import setup_tracing, instrument_fastapi
 from utils.multi_tenant import TenantMiddleware
 from utils.api_versioning import version_middleware
+from utils.security_headers import SecurityHeadersMiddleware
+from utils.csrf_middleware import CSRFMiddleware
 from utils.version import ICAP_VERSION
 from utils.logging_config import setup_logging
 
@@ -76,6 +78,9 @@ app.add_middleware(
 app.add_middleware(CorrelationIDMiddleware)
 app.add_middleware(TenantMiddleware)
 app.add_middleware(version_middleware)
+app.add_middleware(SecurityHeadersMiddleware)
+if environment == "production":
+    app.add_middleware(CSRFMiddleware)
 
 setup_tracing(service_name="icap-api")
 instrument_fastapi(app)

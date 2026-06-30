@@ -6,7 +6,7 @@ metadata:
   namespace: icap
   labels:
     app: icap-api
-    version: v0.2.3
+    version: v0.2.4
 spec:
   replicas: 3  # Horizontal scaling - 3 replicas
   selector:
@@ -21,7 +21,7 @@ spec:
     metadata:
       labels:
         app: icap-api
-        version: v0.2.3
+        version: v0.2.4
     spec:
       # Anti-affinity for high availability
       affinity:
@@ -39,7 +39,7 @@ spec:
       
       containers:
       - name: icap-api
-        image: icap-api:0.2.3
+        image: icap-api:0.2.4
         imagePullPolicy: Always
         ports:
         - containerPort: 8000
@@ -50,7 +50,7 @@ spec:
         - name: ICAP_ENVIRONMENT
           value: "production"
         - name: ICAP_VERSION
-          value: "0.2.3"
+          value: "0.2.4"
         - name: ICAP_DATABASE_URL
           valueFrom:
             secretKeyRef:

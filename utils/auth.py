@@ -127,6 +127,28 @@ def clean_expired_blacklisted_tokens():
     if expired_tokens:
         logger.info(f"Cleaned {len(expired_tokens)} expired blacklisted tokens")
 
+def get_current_user_from_token(token: str) -> Dict[str, Any]:
+    """Helper to validate token and return user data."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        token_id = payload.get("jti")
+
+        if token_id and is_token_blacklisted(token_id):
+            raise ValueError("Token has been revoked")
+
+        username: str = payload.get("sub")
+        role: str = payload.get("role", "OPERATOR")
+        tenant_id: str = payload.get("tenant_id", "default")
+        token_type: str = payload.get("type", "access")
+
+        if username is None or token_type != "access":
+            raise ValueError("Invalid token")
+
+        return {"username": username, "role": role, "tenant_id": tenant_id}
+    except Exception as e:
+        logger.error(f"Token validation error: {e}")
+        raise ValueError(str(e))
+
 async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any]:
     """
     Get the current user from the JWT token.
@@ -144,37 +166,8 @@ async def get_current_user(token: str = Depends(oauth2_scheme)) -> Dict[str, Any
     )
     
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        token_id = payload.get("jti")
-        
-        # Check if token is blacklisted
-        if token_id and is_token_blacklisted(token_id):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Token has been revoked",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        username: str = payload.get("sub")
-        role: str = payload.get("role", "OPERATOR")
-        tenant_id: str = payload.get("tenant_id", "default")
-        token_type: str = payload.get("type", "access")
-        
-        if username is None:
-            raise credentials_exception
-        
-        # Ensure it's an access token
-        if token_type != "access":
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token type",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        return {"username": username, "role": role, "tenant_id": tenant_id}
-        
-    except JWTError as e:
-        logger.error(f"JWT error: {e}")
+        return get_current_user_from_token(token)
+    except ValueError as e:
         raise credentials_exception
 
 async def get_current_active_user(current_user: Dict[str, Any] = Depends(get_current_user)) -> Dict[str, Any]:
