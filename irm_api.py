@@ -1,7 +1,7 @@
 """
 Industrial Color AI Platform (ICAP) — Application Entry Point
 ==========================================================
-Version: 0.1.1 Enterprise
+Version: 0.2.2 Enterprise
 """
 
 import uvicorn

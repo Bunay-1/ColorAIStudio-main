@@ -67,3 +67,21 @@ def test_generate_iso_report_v1(auth_headers):
         response = client.post("/v1/reports/generate-iso", headers=auth_headers)
         assert response.status_code == 200
         assert "filename" in response.json()
+
+def test_legacy_clients_proxy(auth_headers):
+    with TestClient(app) as client:
+        response = client.get("/clients", headers=auth_headers)
+        assert response.status_code == 200
+        assert response.headers["X-API-Deprecated"] == "true"
+
+def test_legacy_diagnose_proxy(auth_headers):
+    payload = {
+        "prompt": "Test",
+        "context": "Test context",
+        "use_rag": False,
+        "query": "Test"
+    }
+    with TestClient(app) as client:
+        response = client.post("/diagnose", json=payload, headers=auth_headers)
+        assert response.status_code == 200
+        assert response.headers["X-API-Deprecated"] == "true"
