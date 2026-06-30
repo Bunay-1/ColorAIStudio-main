@@ -6,9 +6,9 @@
 
 | Версия | Поддържана |
 | :--- | :--- |
+| 0.2.x | ✅ |
 | 8.11.x | ✅ |
-| 8.10.x | ❌ |
-| < 8.10 | ❌ |
+| < 8.11 | ❌ |
 
 ## Докладване на уязвимост
 
@@ -26,9 +26,9 @@ The following versions are currently supported with security fixes:
 
 | Version | Supported |
 | :--- | :--- |
+| 0.2.x | ✅ |
 | 8.11.x | ✅ |
-| 8.10.x | ❌ |
-| < 8.10 | ❌ |
+| < 8.11 | ❌ |
 
 ## Reporting a Vulnerability
 
