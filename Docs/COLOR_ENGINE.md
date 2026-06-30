@@ -33,4 +33,4 @@
 - **Инструментална точност:** Реалната точност зависи от използвания хардуер (обикновено ±0.01 dE за индустриални спектрофотометри).
 
 ---
-*ICAP Engineering Documentation*
+*ICAP Engineering Documentation | v0.2.3 Enterprise*
