@@ -8,8 +8,8 @@ import pytest
 import json
 import time
 from unittest.mock import Mock, patch
-from iot_connector import IRM_IoT_Connector
-from opc_ua_connector import IRM_OPCUA_Connector
+from app.modules.iot_connector import IRM_IoT_Connector
+from app.modules.opc_ua_connector import IRM_OPCUA_Connector
 
 @pytest.fixture
 def mqtt_connector():
@@ -73,7 +73,7 @@ def test_opcua_connector_initialization(opcua_connector):
 def test_opcua_connector_config_from_env():
     """Тест за конфигурация от environment variables."""
     # Test that configuration is loaded from environment
-    from opc_ua_connector import OPC_UA_SERVER_URL, NODES_TO_WATCH
+    from app.modules.opc_ua_connector import OPC_UA_SERVER_URL, NODES_TO_WATCH
     
     assert OPC_UA_SERVER_URL is not None
     assert isinstance(NODES_TO_WATCH, list)

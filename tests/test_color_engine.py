@@ -6,7 +6,7 @@ Tests for color calculations, Delta E, and spectral analysis.
 
 import pytest
 import numpy as np
-from color_engine import ColorEngine
+from app.modules.color_engine import ColorEngine
 
 
 class TestColorEngine:
