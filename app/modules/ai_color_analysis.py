@@ -130,7 +130,7 @@ class AIColorAnalysis:
             "concentration": "2.5%"
         }
 
-    def calculate_sustainability_index(self, recipe_data: Dict[str, Any], batch_size_kg: float, energy_data: float = 0) -> Dict[str, Union[float, str]]:
+    def calculate_sustainability_index(self, recipe_data: Dict[str, Any], batch_size_kg: float, energy_consumption_kwh: float = 0.0) -> Dict[str, Union[float, str]]:
         """
         Изчислява Sustainability Index и CO2 отпечатък (LCA) в реално време (Industry 5.0).
         Бенчмаркинг срещу ISO 14040/14044.
@@ -157,7 +157,7 @@ class AIColorAnalysis:
             total_co2 += comp.get("amount", 0) * impact_factors.get(comp.get("name"), 2.5)
 
         # 2. Real-time Energy Impact (Link from IoT)
-        total_co2 += energy_data * impact_factors["Electricity_kWh"]
+        total_co2 += energy_consumption_kwh * impact_factors["Electricity_kWh"]
 
         # 3. Waste Risk (ISO 14044 circularity check)
         de = recipe_data.get("delta_e", 0)
@@ -173,7 +173,7 @@ class AIColorAnalysis:
         return {
             "sustainability_score": round(score, 1),
             "co2_footprint_kg": round(total_co2, 2),
-            "energy_consumption_kwh": energy_data,
+            "energy_consumption_kwh": energy_consumption_kwh,
             "eco_label": "A++" if score > 95 else "A" if score > 85 else "B" if score > 70 else "C",
             "iso_compliance": "ISO 14040/14044 Benchmarked",
             "benchmark_status": "Above Industry Standard" if performance_vs_standard < 1.0 else "Needs Optimization",

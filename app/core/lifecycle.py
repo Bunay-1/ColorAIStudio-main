@@ -11,6 +11,7 @@ from app.modules.color_engine import ColorEngine
 from app.modules.ai_color_analysis import AIColorAnalysis
 from app.modules.vision_engine import VisionEngine
 from app.modules.agents_system import AgentOrchestrator
+from app.modules.digital_twin import DigitalTwinService
 from app.modules.alerting_system import alert_system
 from app.core.state import ICAPState
 from app.core.ws_manager import ConnectionManager
@@ -49,6 +50,7 @@ async def lifespan(app: FastAPI):
     icap_state.vision_engine = VisionEngine(triton_url=os.environ.get("TRITON_SERVER_URL"), lightweight=(os.environ.get("ICAP_EDGE_MODE") == "1"))
     icap_state.ai_analysis = AIColorAnalysis()
     icap_state.agent_orchestrator = AgentOrchestrator(icap_state.ai_analysis, icap_state.vision_engine, icap_state.rag)
+    icap_state.digital_twin = DigitalTwinService(icap_state.color_engine)
 
     app.state.icap = icap_state
     app.state.manager = ConnectionManager()

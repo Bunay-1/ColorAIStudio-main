@@ -87,6 +87,15 @@ class VisionEngine:
                         self.model.to('cuda')
                         logger.info("Използване на FP16 CUDA прецизност.")
 
+                        # PyTorch 2.0+ Optimization (torch.compile)
+                        if hasattr(torch, "compile") and not self.edge_mode:
+                            try:
+                                logger.info("Активиране на torch.compile за допълнително ускорение...")
+                                # Compiled model for better kernel fusion
+                                self.model.model = torch.compile(self.model.model)
+                            except Exception as e:
+                                logger.warning(f"torch.compile failed: {e}")
+
             except Exception as yolo_load_error:
                 logger.warning(f"Неуспешно зареждане на {model_path}: {yolo_load_error}")
                 logger.info("Опит с fallback модел yolov8n.pt")
@@ -192,6 +201,24 @@ class VisionEngine:
         # За момента добавяме скелетната логика за индустриална интеграция
         logger.info(f"Делегиране на анализа към Triton: {image_path}")
         return [{"class": "triton_inference_active", "confidence": 1.0, "bbox": [0,0,0,0]}]
+
+    def export_to_tensorrt(self, imgsz=640):
+        """
+        Експортира текущия YOLO модел към TensorRT (.engine) формат за максимална скорост.
+        Изисква наличие на NVIDIA GPU и инсталиран TensorRT.
+        """
+        if not self.enabled or self.triton_client:
+            return False
+
+        try:
+            logger.info(f"Стартиране на TensorRT експорт (imgsz={imgsz})...")
+            # Автоматично генерира .engine файл
+            export_path = self.model.export(format='engine', device=0, imgsz=imgsz, half=True)
+            logger.info(f"Успешен експорт: {export_path}")
+            return True
+        except Exception as e:
+            logger.error(f"TensorRT експортът се провали: {e}")
+            return False
 
     def detect_defects(self, image_path, active_learning=True):
         """

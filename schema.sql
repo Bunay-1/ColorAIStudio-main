@@ -1,4 +1,4 @@
--- ICAP Database Schema (v0.2.7)
+-- ICAP Database Schema (v0.2.8)
 -- SQLite compatible schema
 
 -- 1. Tenants table
