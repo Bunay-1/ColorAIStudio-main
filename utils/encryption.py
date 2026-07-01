@@ -289,7 +289,7 @@ def encrypt_database_value(value: str) -> str:
     return EncryptionManager.encrypt_field(value)
 
 def decrypt_database_value(encrypted_value: str) -> str:
-    """Decrypt a value from database storage."""
+    """Decrypt a value from app.modules.database storage."""
     return EncryptionManager.decrypt_field(encrypted_value)
 
 def encrypt_config_value(config_key: str, config_value: str) -> str:
