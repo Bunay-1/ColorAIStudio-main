@@ -1,9 +1,9 @@
 from typing import Optional
-from rag_system import IRM_RAG
-from color_engine import ColorEngine
-from vision_engine import VisionEngine
-from ai_color_analysis import AIColorAnalysis
-from agents_system import AgentOrchestrator
+from app.modules.rag_system import IRM_RAG
+from app.modules.color_engine import ColorEngine
+from app.modules.vision_engine import VisionEngine
+from app.modules.ai_color_analysis import AIColorAnalysis
+from app.modules.agents_system import AgentOrchestrator
 
 class ICAPState:
     def __init__(self) -> None:

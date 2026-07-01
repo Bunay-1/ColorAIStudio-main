@@ -1,4 +1,4 @@
-# ICAP Platform Dockerfile — v0.2.6 Enterprise
+# ICAP Platform Dockerfile — v0.2.7 Enterprise
 # Multi-stage build for optimized image size and security
 # Оптимизиран за индустриално приложение с GPU поддръжка
 
@@ -31,7 +31,7 @@ RUN pip3 install --no-cache-dir --user -r requirements.txt
 
 # Stage 2: Runtime
 FROM nvidia/cuda:12.1.0-runtime-ubuntu22.04
-LABEL org.opencontainers.image.version="0.2.6"
+LABEL org.opencontainers.image.version="0.2.7"
 
 # Дефиниране на променливи на средата
 ENV DEBIAN_FRONTEND=noninteractive
@@ -60,22 +60,6 @@ RUN mkdir -p /app/RAG /app/vector_db /app/AuditTrail /app/Docs
 
 # Копираме само необходимите файлове
 COPY requirements.txt .
-COPY irm_api.py .
-COPY color_engine.py .
-COPY ai_color_analysis.py .
-COPY vision_engine.py .
-COPY agents_system.py .
-COPY rag_system.py .
-COPY knowledge_graph.py .
-COPY database.py .
-COPY alerting_system.py .
-COPY iot_connector.py .
-COPY opc_ua_connector.py .
-COPY voice_assistant.py .
-COPY synthetic_gen.py .
-COPY prepare_data.py .
-COPY evaluate_model.py .
-COPY finetune_unsloth.py .
 COPY app/ ./app/
 COPY routers/ ./routers/
 COPY services/ ./services/
@@ -94,7 +78,7 @@ EXPOSE 8000
 
 # Стартираме API сървъра
 # За продукция в индустриална мрежа се препоръчва използването на --env-file при стартиране
-CMD ["python3", "irm_api.py"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 
 # Healthcheck за Docker Desktop и Orchestrators
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \

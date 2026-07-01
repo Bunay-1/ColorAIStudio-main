@@ -10,9 +10,9 @@ from typing import List, Optional, Dict, Any
 from datetime import datetime
 from fastapi import Depends, Request
 import logging
-import database
+from app.modules import database
 from utils.version import ICAP_VERSION_DISPLAY
-from color_engine import ColorEngine
+from app.modules.color_engine import ColorEngine
 
 logger = logging.getLogger("GraphQLRouter")
 
@@ -337,6 +337,7 @@ class Mutation:
         Създаване на ново измерване.
         """
         try:
+            from app.modules.color_engine import ColorEngine
             engine = ColorEngine()
             delta_e = engine.calculate_delta_e(lab_sample, lab_standard, method)
             

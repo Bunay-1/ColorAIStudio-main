@@ -121,7 +121,7 @@ def generate_html_report(request_data, de, status, status_color, color_engine):
 
 def generate_iso_audit_report():
     """Автоматично генериране на ISO 9001 одитен отчет (HTML) от SQL базата."""
-    import database
+    from app.modules import database
     try:
         conn = database.get_db_connection()
         df = pd.read_sql_query("SELECT * FROM measurements", conn)

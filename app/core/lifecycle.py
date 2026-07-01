@@ -5,13 +5,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from dotenv import load_dotenv
 
-import database
-from rag_system import IRM_RAG
-from color_engine import ColorEngine
-from ai_color_analysis import AIColorAnalysis
-from vision_engine import VisionEngine
-from agents_system import AgentOrchestrator
-from alerting_system import alert_system
+from app.modules import database
+from app.modules.rag_system import IRM_RAG
+from app.modules.color_engine import ColorEngine
+from app.modules.ai_color_analysis import AIColorAnalysis
+from app.modules.vision_engine import VisionEngine
+from app.modules.agents_system import AgentOrchestrator
+from app.modules.alerting_system import alert_system
 from app.core.state import ICAPState
 from app.core.ws_manager import ConnectionManager
 from app.core.indexer import background_indexer

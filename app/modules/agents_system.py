@@ -109,7 +109,7 @@ class RootCauseAgent(BaseAgent):
         kg_reasoning: str = ""
         if de > 1.0:
             try:
-                from knowledge_graph import IndustrialKG
+                from app.modules.knowledge_graph import IndustrialKG
                 # Run blocking knowledge graph operation in executor
                 kg: IndustrialKG = IndustrialKG()
                 path: Optional[List[Dict[str, Any]]] = await asyncio.get_event_loop().run_in_executor(

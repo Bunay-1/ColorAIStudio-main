@@ -27,7 +27,7 @@ from langchain_experimental.text_splitter import SemanticChunker
 from langchain_huggingface import HuggingFaceEmbeddings
 import numpy as np
 from sentence_transformers import CrossEncoder
-from knowledge_graph import IndustrialKG
+from app.modules.knowledge_graph import IndustrialKG
 from qdrant_client import AsyncQdrantClient
 from qdrant_client.http import models
 from fastembed import SparseTextEmbedding

@@ -21,6 +21,21 @@ from utils.logging_config import setup_logging
 from app.core.lifecycle import lifespan
 from app.api import health, legacy
 
+load_dotenv()
+
+# Logger configuration
+environment = os.environ.get("ICAP_ENVIRONMENT", "development")
+setup_logging(environment)
+logger = logging.getLogger("ICAP_API")
+
+# Required Environment Variables Validation
+REQUIRED_ENV_VARS = ["ICAP_DATABASE_URL", "QDRANT_URL", "OLLAMA_URL", "JWT_SECRET"]
+if environment == "production":
+    missing_vars = [var for var in REQUIRED_ENV_VARS if not os.environ.get(var)]
+    if missing_vars:
+        logger.critical(f"❌ ЛИПСВАЩА КОНФИГУРАЦИЯ: Следните променливи на средата са задължителни в production: {', '.join(missing_vars)}")
+        raise RuntimeError(f"Missing required environment variables: {', '.join(missing_vars)}")
+
 # Routers
 from routers import vision, rag, agents, training, iot, auth, notifications, analytics, webhooks, compliance, mfa, cache, export_import, websocket, graphql, clients, models, knowledge_graph, reports
 try:
@@ -29,13 +44,6 @@ try:
 except ImportError:
     color = None
     COLOR_ROUTER_AVAILABLE = False
-
-load_dotenv()
-
-# Logger configuration
-environment = os.environ.get("ICAP_ENVIRONMENT", "development")
-setup_logging(environment)
-logger = logging.getLogger("ICAP_API")
 
 app = FastAPI(
     title="Industrial Color AI Platform (ICAP) API",
