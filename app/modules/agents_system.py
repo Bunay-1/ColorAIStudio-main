@@ -107,31 +107,43 @@ class RootCauseAgent(BaseAgent):
 
         # Дълбок верижен RCA анализ чрез Графа на Знанието (v8 Chain Analysis)
         kg_reasoning: str = ""
-        if de > 1.0:
+        # Засечи потенциални проблеми в дефектите
+        detected_issue = "Yellow_Drift" if de > 1.0 else None
+        if defects:
+            detected_issue = defects[0].get('class', detected_issue)
+
+        if detected_issue:
             try:
                 from app.modules.knowledge_graph import IndustrialKG
-                # Run blocking knowledge graph operation in executor
-                kg: IndustrialKG = IndustrialKG()
-                path: Optional[List[Dict[str, Any]]] = await asyncio.get_event_loop().run_in_executor(
+                # Използваме споделената инстанция на графа от RAG системата ако е налична
+                kg = self.rag.kg if hasattr(self.rag, 'kg') else IndustrialKG()
+
+                path = await asyncio.get_event_loop().run_in_executor(
                     _executor,
                     kg.find_reasoning_path,
-                    "Yellow_Drift",
-                    2
+                    detected_issue,
+                    3 # По-голяма дълбочина за по-добър RCA
                 )
+
                 if isinstance(path, list) and len(path) > 0:
-                    kg_reasoning = "\n[RCA AI]: Открита причинно-следствена верига:\n"
+                    kg_reasoning = f"\n[GraphRAG RCA]: Открита причинно-следствена верига за '{detected_issue}':\n"
                     def format_chain(steps: List[Dict[str, Any]], level: int = 0) -> str:
                         res: str = ""
                         for s in steps:
-                            res += "  " * level + f"- {s['source']} ({s['relation']}) -> "
+                            res += "  " * level + f"↳ {s['source']} ({s['relation']})"
+                            if s.get('condition'):
+                                res += f" при {s['condition']}"
+                            res += " -> "
                             if not s.get('sub_steps'):
-                                res += "Коренна причина\n"
+                                res += "КОРЕННА ПРИЧИНА\n"
                             else:
-                                res += "Проблем\n" + format_chain(s['sub_steps'], level + 1)
+                                res += "\n" + format_chain(s['sub_steps'], level + 1)
                         return res
                     kg_reasoning += format_chain(path)
-            except (ImportError, AttributeError) as e:
-                logger.warning(f"Knowledge Graph unavailable: {e}")
+                elif isinstance(path, str): # Ако върне съобщение за грешка
+                    kg_reasoning = f"\n[GraphRAG]: {path}"
+            except Exception as e:
+                logger.warning(f"Knowledge Graph reasoning failed: {e}")
 
         context: str = ""
         if defects:
@@ -257,13 +269,16 @@ class SustainabilityAgent(BaseAgent):
 
     async def process(self, task_data: Dict[str, Any]) -> Dict[str, Any]:
         batch_size = task_data.get("batch_size", 100.0)
+        # Интеграция на реални енергийни данни от IoT ако са налични
+        energy_data = task_data.get("energy_consumption_kwh", 0.0)
+
         # Подготовка на данни за анализа
         recipe_data = {
             "delta_e": task_data.get("delta_e", 0.0),
             "components": task_data.get("recipe_components", [])
         }
 
-        impact = self.ai.calculate_sustainability_index(recipe_data, batch_size)
+        impact = self.ai.calculate_sustainability_index(recipe_data, batch_size, energy_data=energy_data)
 
         return {
             "agent": self.name,

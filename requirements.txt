@@ -1,4 +1,4 @@
-# --- ICAP PRODUCTION REQUIREMENTS (v0.2.7 Enterprise) ---
+# --- ICAP PRODUCTION REQUIREMENTS (v0.2.8 Enterprise) ---
 
 # Backend & API
 fastapi==0.111.0
