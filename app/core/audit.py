@@ -1,4 +1,4 @@
-import database
+from app.modules import database
 import logging
 import sqlite3
 from typing import Dict, Any

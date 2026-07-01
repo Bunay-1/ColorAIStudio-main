@@ -5,7 +5,7 @@ Business logic for client management.
 """
 
 import logging
-import database
+from app.modules import database
 from app.core.models import ClientCreateRequest
 
 logger = logging.getLogger("Client_Service")

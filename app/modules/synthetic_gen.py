@@ -11,7 +11,7 @@ import argparse
 import time
 import random
 from pathlib import Path
-from rag_system import IRM_RAG
+from app.modules.rag_system import IRM_RAG
 
 # Списък с индустриални теми (fallback ако RAG е празен)
 TOPICS = [

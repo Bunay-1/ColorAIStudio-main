@@ -11,7 +11,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import Dict, Any
 
 from utils.auth import get_current_active_user
-from knowledge_graph import IndustrialKG
+from app.modules.knowledge_graph import IndustrialKG
 
 router = APIRouter(tags=["Knowledge Graph"])
 logger = logging.getLogger("KG_Router")

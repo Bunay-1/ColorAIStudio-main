@@ -8,7 +8,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Request, HTTPExce
 from fastapi.responses import JSONResponse, FileResponse
 from pydantic import ValidationError
 
-import database
+from app.modules import database
 from app.core.models import ClientCreateRequest
 from routers import vision, rag, color, training, agents, iot, models, knowledge_graph, reports
 from services import (
@@ -147,7 +147,7 @@ async def kg_export():
 
 @router.get("/kg_reason/{issue}", dependencies=[Depends(get_current_active_user)])
 async def kg_reason(issue: str):
-    from knowledge_graph import IndustrialKG
+    from app.modules.knowledge_graph import IndustrialKG
     kg = IndustrialKG()
     return JSONResponse(content={"reasoning": kg.find_reasoning_path(issue)}, headers=DEPRECATED_HEADERS)
 

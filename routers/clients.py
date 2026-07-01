@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Dict, List
 import logging
 
-import database
+from app.modules import database
 from app.core.models import ClientCreateRequest
 from utils.auth import get_current_active_user
 from services import client_service
