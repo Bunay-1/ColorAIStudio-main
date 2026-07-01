@@ -9,7 +9,7 @@ import numpy as np
 import cv2
 import os
 import tempfile
-from vision_engine import VisionEngine
+from app.modules.vision_engine import VisionEngine
 
 
 class TestVisionEngine:

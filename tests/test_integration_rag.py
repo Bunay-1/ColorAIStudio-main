@@ -7,8 +7,8 @@ Integration Tests for RAG System
 import pytest
 import asyncio
 import os
-from rag_system import RAGSystem
-from knowledge_graph import IndustrialKG
+from app.modules.rag_system import RAGSystem
+from app.modules.knowledge_graph import IndustrialKG
 
 @pytest.fixture
 async def rag_system():

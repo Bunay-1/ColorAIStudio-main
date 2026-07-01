@@ -6,8 +6,8 @@ Integration Tests for Color Engine
 
 import pytest
 import numpy as np
-from color_engine import ColorEngine
-from ai_color_analysis import AIColorAnalysis
+from app.modules.color_engine import ColorEngine
+from app.modules.ai_color_analysis import AIColorAnalysis
 
 @pytest.fixture
 def color_engine():

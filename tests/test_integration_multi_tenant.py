@@ -19,7 +19,7 @@ from utils.multi_tenant import (
     activate_tenant, deactivate_tenant, get_tenant_stats, TenantContext
 )
 from utils.auth import create_user, UserCreate, authenticate_user, create_access_token
-from database import get_measurements_by_batch, insert_measurement
+from app.modules.database import get_measurements_by_batch, insert_measurement
 
 @pytest.fixture
 async def client():

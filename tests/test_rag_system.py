@@ -7,7 +7,7 @@ Tests for RAG indexing, querying, and knowledge retrieval.
 import pytest
 import os
 import tempfile
-from rag_system import IRM_RAG
+from app.modules.rag_system import IRM_RAG
 
 
 class TestRAGSystem:
